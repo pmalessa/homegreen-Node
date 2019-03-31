@@ -10,7 +10,7 @@
 
 #define PUMP_DDR DDRA
 #define PUMP_PORT PORTA
-#define PUMP_PIN PA7
+#define PUMP_PIN PA1
 
 void pump_init();
 
