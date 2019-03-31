@@ -16,7 +16,7 @@
 #include <avr/sleep.h>
 #include <stdlib.h>
 
-#define FIRMWARE_VERSION 0x11 //1.1
+#define BUILD_DATE 20190331
 
 #define BUZZER_DDR DDRB
 #define BUZZER_PORT PORTB
