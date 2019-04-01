@@ -8,7 +8,7 @@
 #ifndef POWER_H_
 #define POWER_H_
 
-#define CHANNEL_1V1	0b1101
+#define CHANNEL_1V1	0b1110
 
 #define LOWVOLTAGE 2000	//Low Voltage Threshold in mV
 #define POWER_THRESHOLD 3000

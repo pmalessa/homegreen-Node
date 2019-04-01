@@ -64,9 +64,10 @@ void powerchange_callback()
 
 int main (void) {
 	//watchdog init
-	MCUSR &= ~(1<<WDRF);
-	CCP = 0xD8;
-	WDTCSR = (1 << WDIE) | (1 << WDP2) | (1 << WDP1); //every 1 s
+	cli();
+	MCUSR &= ~(1<<WDRF);								//unlock step 1
+	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
+	WDTCSR = (1 << WDIE) | (1 << WDP2) | (1 << WDP1); 	//Set to Interrupt Mode and "every 1 s"
 
 	timer_init();
 	button_init();

@@ -13,7 +13,8 @@
 #define BUT_SET_INT PCINT19
 #define BUT_MAN_INT PCINT20
 
-
+#define BUTTON_DDR DDRD
+#define BUTTON_PIN PIND
 
 typedef enum{
 	BUTTON_NO_PRESS=0,

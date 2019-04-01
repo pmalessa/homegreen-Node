@@ -16,13 +16,11 @@
 void timer_init()
 {
 	//Init 1ms Timer, use Timer 0
-	TCCR0A = 0x00; //Register zuruecksetzen
-	TCCR0B = 0x00;
-	TCCR0A |= (1 << WGM01);                //CTC Modus
-	TCCR0B |= (1 << CS01);  			//Prescaler 8
+	TCCR0A = 0x00;							//Register zuruecksetzen
+	TCCR0A |= (1 << CTC0) | (1 << CS01);	//CTC Mode / Prescaler 8
 	OCR0A = 125 - 1;						// 1000000 / 8 / 1000 = 125 -> 1000Hz
-	TIMSK0 = (1<<OCIE0A);                //Enable Compare Interrupt
-	GTCCR &= ~(1 << TSM);                 //Timer starten
+	TIMSK0 = (1<<OCIE0A);					//Enable Compare Interrupt
+	GTCCR &= ~(1 << TSM);					//Timer starten
 }
 
 //1ms
