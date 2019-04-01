@@ -238,73 +238,9 @@ void tm1637_Clear()
         send_data(a, 0x00);
 }
 
-//old:
-//      Bits:                 Hex:
-//        -- 0 --               -- 01 --
-//       |       |             |        |
-//       5       1            20        02
-//       |       |             |        |
-//        -- 6 --               -- 40 --
-//       |       |             |        |
-//       4       2            10        04
-//       |       |             |        |
-//        -- 3 --  .7           -- 08 --   .80
-
-/** new:
- *      bits:
- *        -- 4 --
- *       |       |
- *		 3		 1
- *       |       |
- *        -- 2 --
- *       |       |
- *       6		 0
- *       |       |
- *        -- 5 --7
- */
-
-uint8_t remap(uint8_t byte)
-{
-	uint8_t ret = 0;
-
-	if(byte & 0x01)	//BIT0
-	{
-		ret |= _BV(4);
-	}
-	if(byte & 0x02) //BIT1
-	{
-		ret |= _BV(1);
-	}
-	if(byte & 0x04) //BIT2
-	{
-		ret |= _BV(0);
-	}
-	if(byte & 0x08) //BIT3
-	{
-		ret |= _BV(5);
-	}
-	if(byte & 0x10) //BIT4
-	{
-		ret |= _BV(6);
-	}
-	if(byte & 0x20) //BIT5
-	{
-		ret |= _BV(3);
-	}
-	if(byte & 0x40) //BIT6
-	{
-		ret |= _BV(2);
-	}
-	if(byte & 0x80) //BIT7
-	{
-		ret |= _BV(7);
-	}
-	return ret;
-}
-
 void tm1637_setByte(uint8_t position, uint8_t b)
 {
-    send_data(position, remap(b) | (dotmask & (1 << position) ? TM_DOT : 0));
+    send_data(position, b | (dotmask & (1 << position) ? TM_DOT : 0));
 }
 
 void tm1637_setDigit(uint8_t position, uint8_t digit)
