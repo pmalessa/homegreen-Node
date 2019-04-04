@@ -7,13 +7,13 @@
 
 #include "PLATFORM.h"
 #include "temp.h"
-#include "TinyWire.h"
+#include "i2c_master.h"
 
 bool read16bitRegister(uint8_t reg, uint16_t* response);
 
 void temp_init()
 {
-	TinyWire_begin();
+	i2c_master_init();
 }
 
 float temp_getTemperature()
@@ -28,27 +28,19 @@ float temp_getTemperature()
 
 bool read16bitRegister(uint8_t reg, uint16_t* response)
 {
-	uint8_t result;
+	uint8_t msg[2];
 
-	TinyWire_beginTransmission(0x48);
-	TinyWire_writeOne(reg);
-	result = TinyWire_endTransmission(true);
-	// result is 0-4
-	if (result != 0)
-	{
-		return false;
-	}
+	msg[0] = (LM75A_DEFAULT_ADDRESS<<TWI_ADR_BITS) | (false<<TWI_READ_BIT);	//set write bit
+	msg[1] = reg;
+	i2c_master_startData(msg,2);
 
-	result = TinyWire_requestFrom(0x48, (uint8_t)2, 0, 0, true);
-	if (result != 2)
-	{
-		return false;
-	}
-	uint8_t part1 = TinyWire_read();
-	uint8_t part2 = TinyWire_read();
+	while(i2c_master_isBusy()); //wait
 
-	//response = (Wire.read() << 8) | Wire.read();
-	uint16_t temp = part1 << 8 | part2;
-	*response = part1 << 8 | part2;
+	msg[0] = (LM75A_DEFAULT_ADDRESS<<TWI_ADR_BITS) | (true<<TWI_READ_BIT);	//set read bit
+	i2c_master_startData(msg,1);
+
+	i2c_master_getData(msg,2);
+
+	*response = msg[0] << 8 | msg[1];
 	return true;
 }
