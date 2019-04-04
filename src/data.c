@@ -79,7 +79,7 @@ void data_decCountdown(uint8_t sec)
 	}
 }
 
-void data_resetCountdown()	//Todo: Maybe here is the error...
+void data_resetCountdown()
 {
 	countdown = (uint32_t)data[DATA_INTERVAL]*360;	//converted to seconds
 }
@@ -91,7 +91,7 @@ uint32_t data_getCountdown()
 
 uint16_t data_getCountdownDisplay()
 {
-	return (countdown/360);	//Todo: or here...
+	return (countdown/360);
 }
 
 void data_save()

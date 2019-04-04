@@ -281,6 +281,7 @@ void state_machine()
 			}
 			if(pump_getCountdown() == 0)
 			{
+				data_resetCountdown();	//reset Countdown
 				fade();
 				switchTo(STATE_DISPLAY);
 			}
