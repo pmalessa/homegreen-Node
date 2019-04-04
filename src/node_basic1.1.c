@@ -158,7 +158,7 @@ void state_machine()
 				display_setByte(5,0x54);	//N
 
 				fade();
-				data_set(DATA_PUMP_DURATION,20);	//2.0min
+				data_set(DATA_PUMP_DURATION,DATA_PUMP_DURATION_DEFAULT);	//2.0min
 				switchTo(STATE_MAN_PUMPING);
 				break;
 			}
@@ -282,6 +282,7 @@ void state_machine()
 			}
 			if(pump_getCountdown() == 0)
 			{
+				data_resetCountdown();	//reset Countdown
 				fade();
 				switchTo(STATE_DISPLAY);
 			}
