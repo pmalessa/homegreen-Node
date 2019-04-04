@@ -16,7 +16,7 @@
 #include <avr/sleep.h>
 #include <stdlib.h>
 
-#define BUILD_DATE 20190331
+#define BUILD_DATE 20190404
 
 #define BUZZER_DDR DDRB
 #define BUZZER_PORT PORTB
