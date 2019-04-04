@@ -18,16 +18,16 @@ void (*button_callback)(void) = &button_dummy_callback;
 
 void button_init()
 {
-	GIMSK = (1<<PCIE0);				//Pin Change Interrupt enable
-	PCMSK0 |= (1<<BUT_MINUS_INT);			//Enable Interrupt on Button Pin
-	PCMSK0 |= (1<<BUT_PLUS_INT);
-	PCMSK0 |= (1<<BUT_SET_INT);
-	PCMSK0 |= (1<<BUT_MAN_INT);
-	DDRA &= ~(_BV(BUTTON_MINUS));			//Set Button as Input
-	DDRA &= ~(_BV(BUTTON_PLUS));
-	DDRA &= ~(_BV(BUTTON_SET));
-	DDRA &= ~(_BV(BUTTON_MAN));
+	PCICR = (1<<PCIE2);				//Enable Interrupt Handler for Pins 23..16
+	PCMSK2 |= (1<<BUT_MINUS_INT);	//Enable Interrupt on Button Pin
+	PCMSK2 |= (1<<BUT_PLUS_INT);
+	PCMSK2 |= (1<<BUT_SET_INT);
+	PCMSK2 |= (1<<BUT_MAN_INT);
 
+	BUTTON_DDR &= ~(_BV(BUTTON_MINUS));			//Set Button as Input
+	BUTTON_DDR &= ~(_BV(BUTTON_PLUS));
+	BUTTON_DDR &= ~(_BV(BUTTON_SET));
+	BUTTON_DDR &= ~(_BV(BUTTON_MAN));
 }
 
 void button_setPCCallback(void (*func)(void))	//set pin change callback function
@@ -51,7 +51,7 @@ uint8_t button_anyPressed()
 
 void button_SyncTask() //50ms
 {
-	if(PINA & (1 << BUTTON_MINUS))
+	if(BUTTON_PIN & (1 << BUTTON_MINUS))
 	{
 		if(button[BUTTON_MINUS].pressed == 0)	//if new press
 		{
@@ -64,7 +64,7 @@ void button_SyncTask() //50ms
 	{
 		button[BUTTON_MINUS].pressed = 0;
 	}
-	if(PINA & (1 << BUTTON_SET))
+	if(BUTTON_PIN & (1 << BUTTON_SET))
 	{
 		if(button[BUTTON_SET].pressed == 0)	//if new press
 		{
@@ -77,7 +77,7 @@ void button_SyncTask() //50ms
 	{
 		button[BUTTON_SET].pressed = 0;
 	}
-	if(PINA & (1 << BUTTON_PLUS))
+	if(BUTTON_PIN & (1 << BUTTON_PLUS))
 	{
 		if(button[BUTTON_PLUS].pressed == 0)	//if new press
 		{
@@ -90,7 +90,7 @@ void button_SyncTask() //50ms
 	{
 		button[BUTTON_PLUS].pressed = 0;
 	}
-	if(PINA & (1 << BUTTON_MAN))
+	if(BUTTON_PIN & (1 << BUTTON_MAN))
 	{
 		if(button[BUTTON_MAN].pressed == 0)	//if new press
 		{
@@ -138,7 +138,7 @@ button_press button_isPressed(button_t but)
 	}
 }
 
-ISR(PCINT0_vect)	//Pin change on Button Pin
+ISR(PCINT2_vect)	//Pin change on Button Pin
 {
 	button_any_pressed = 1;
 	button_callback();

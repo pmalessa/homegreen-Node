@@ -37,11 +37,11 @@
 // NOTE: All three pins used must be bits on the same PORT register (ex. PORTB)
 // ----------------------------------------------------------------------------
 
-#define TM_OUT          PORTB
-#define TM_IN           PINB
-#define TM_DDR          DDRB
-#define TM_BIT_CLK      _BV(PB0)
-#define TM_BIT_DAT      _BV(PB1)
+#define TM_OUT          PORTD
+#define TM_IN           PIND
+#define TM_DDR          DDRD
+#define TM_BIT_CLK      _BV(PD5)
+#define TM_BIT_DAT      _BV(PD6)
 
 // ----------------------------------------------------------------------------
 // Functions and parameters

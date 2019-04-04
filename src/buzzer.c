@@ -32,14 +32,10 @@ void buzzer_init()
 	TCCR1B = 0x00;
 	TCCR1C = 0x00;
 
-	TCCR1A = (1<<COM1A0); //Enable A Output on Timer 1, toggle on Compare match
+	TCCR1A = (1<<COM1A0); 				//Enable A Output on Timer 1, toggle on Compare match
 	TCCR1B = (1<< WGM12) | (1 << CS11);	//CTC, Prescaler 8
 
-	TOCPMSA0 = 0x00;	//Set Pin Mux Register 1 to select OC0A Output
-	TOCPMSA1 = 0x00;
-	TOCPMCOE = (1 << TOCC1OE);	//Enable Pin Mux 1
-
-	DDRB |= _BV(PB2); //Set Buzzer pin as output
+	BUZZER_DDR |= _BV(BUZZER_PIN); //Set Buzzer pin as output
 }
 
 void buzzer_playTone(uint8_t tone_id)

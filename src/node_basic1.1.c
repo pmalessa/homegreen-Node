@@ -64,9 +64,10 @@ void powerchange_callback()
 
 int main (void) {
 	//watchdog init
-	MCUSR &= ~(1<<WDRF);
-	CCP = 0xD8;
-	WDTCSR = (1 << WDIE) | (1 << WDP2) | (1 << WDP1); //every 1 s
+	cli();
+	MCUSR &= ~(1<<WDRF);								//unlock step 1
+	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
+	WDTCSR = (1 << WDIE) | (1 << WDP2) | (1 << WDP1); 	//Set to Interrupt Mode and "every 1 s"
 
 	timer_init();
 	button_init();
@@ -157,7 +158,7 @@ void state_machine()
 				display_setByte(5,0x54);	//N
 
 				fade();
-				data_set(DATA_PUMP_DURATION,20);	//2.0min
+				data_set(DATA_PUMP_DURATION,DATA_PUMP_DURATION_DEFAULT);	//2.0min
 				switchTo(STATE_MAN_PUMPING);
 				break;
 			}
@@ -281,6 +282,7 @@ void state_machine()
 			}
 			if(pump_getCountdown() == 0)
 			{
+				data_resetCountdown();	//reset Countdown
 				fade();
 				switchTo(STATE_DISPLAY);
 			}
