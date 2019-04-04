@@ -8,11 +8,11 @@
 #ifndef I2C_MASTER_H_
 #define I2C_MASTER_H_
 
-#define SDA_PORT PORTA
-#define SDA_PIN PORTA6
+#define SDA_PORT PORTC
+#define SDA_PIN PORTC4
 
-#define SCL_PORT PORTA
-#define SCL_PIN PORTA4
+#define SCL_PORT PORTC
+#define SCL_PIN PORTC5
 
 #define I2C_TIMEOUT 100
 

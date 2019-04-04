@@ -1,5 +1,5 @@
 TARGET=node_basic1.1
-MCU=attiny841
+MCU=attiny88
 F_CPU=1000000
 SOURCES=node_basic1.1.c tm1637.c timer.c button.c pump.c buzzer.c display.c power.c data.c I2C_Master.c TinyWire.c temp.c
 
@@ -32,7 +32,7 @@ $(TARGET).elf: $(OBJECTS)
 	avr-gcc $(CFLAGS) -mmcu=$(MCU) $< -o $@
 
 size:
-	avr-size --mcu=attiny84 -C $(TARGET).elf	#attiny841 not supported
+	avr-size --mcu=attiny88 -C $(TARGET).elf
 
 program:
 	avrdude -p$(MCU) $(PORT) $(BAUD) -c$(PROGRAMMER) -Uflash:w:$(TARGET).hex:a

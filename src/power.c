@@ -22,8 +22,6 @@ void power_init() {
 	//adc init
     ADCSRA = _BV(ADEN) | _BV(ADPS1) | _BV(ADPS0);	//DIV8
     ADCSRB = 0;
-    ADMUXA = 0;
-    ADMUXB = 0;
     measureVoltage();	//scrap measurement
     powerstate = power_isPowerConnected();
 }
@@ -34,7 +32,8 @@ void power_setCallback(void (*func)(void))	//set pin change callback function
 }
 
 uint16_t adcReadChannel(uint8_t channel) {
-    ADMUXA = channel;
+    ADMUX = channel;
+    ADMUX |= (1<<REFS0);	//using VCC Reference
     ADCSRA |= _BV(ADSC);	//start conversion
     while(ADCSRA & (1 << ADSC));	//wait for ADC to complete
     uint16_t ret = ADC;
