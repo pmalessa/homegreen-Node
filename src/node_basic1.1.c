@@ -81,9 +81,15 @@ int main (void) {
 
 	sei();
 
+	uint8_t i = 0;
 	while(1)
 	{
-		state_machine();
+		//state_machine();
+		float temp = temp_getTemperature();
+		display_setValue(DIGIT_INTERVAL,((uint8_t)temp/1)*10);
+		display_setValue(DIGIT_DURATION,((uint8_t)temp%1)*10);
+		display_setValue(DIGIT_COUNTDOWN,i++);
+		_delay_ms(500);
 	}
 }
 
