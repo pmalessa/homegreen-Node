@@ -16,13 +16,15 @@ typedef struct{
 volatile uint8_t playing = 0;
 volatile tone_t *buf;
 
+void set_freq(uint16_t hz);
+
 tone_t boot[5] =
 {
 		//freq_hz, length_10ms
-		{1000, 20},
-		{1250, 20},
-		{1500, 20},
-		{2000, 20},
+		{1000, 200},
+		{1250, 200},
+		{1500, 200},
+		{2000, 200},
 		{0,0}
 };
 
@@ -42,8 +44,20 @@ void buzzer_playTone(uint8_t tone_id)
 {
 	switch (tone_id) {
 		case TONE_BOOT:
+			/*
 			playing = 1;
 			buf = boot;
+			*/
+			TCCR1A = (1<<COM1A0);	//enable output
+			set_freq(1000);
+			_delay_ms(200);
+			set_freq(1500);
+			_delay_ms(200);
+			set_freq(2000);
+			_delay_ms(200);
+			set_freq(3000);
+			_delay_ms(200);
+			TCCR1A &= ~(1<<COM1A0);	//disable output
 			break;
 		default:
 			break;
@@ -73,6 +87,7 @@ void buzzer_SyncTask()	//10ms
 		{
 			cnt = 0;
 			playing = 0;
+			set_freq((*buf).freq);
 			return;
 		}
 		else if(cnt == 0)	//start of tone
