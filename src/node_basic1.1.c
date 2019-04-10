@@ -85,9 +85,9 @@ int main (void) {
 	while(1)
 	{
 		//state_machine();
-		float temp = temp_getTemperature();
-		display_setValue(DIGIT_INTERVAL,((uint8_t)temp/1)*10);
-		display_setValue(DIGIT_DURATION,((uint8_t)temp%1)*10);
+		temp_updateTemp();
+		display_setValue(DIGIT_INTERVAL,((uint8_t)data_get(DATA_CURRENT_TEMP)/1)*10);
+		display_setValue(DIGIT_DURATION,((uint8_t)data_get(DATA_CURRENT_TEMP)%1)*10);
 		display_setValue(DIGIT_COUNTDOWN,i++);
 		_delay_ms(500);
 	}
