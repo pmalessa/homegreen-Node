@@ -81,11 +81,13 @@ int main (void) {
 
 	sei();
 
+	//temp_updateTemp();
+
 	uint8_t i = 0;
 	while(1)
 	{
 		//state_machine();
-		temp_updateTemp();
+		//temp_updateTemp();
 		display_setValue(DIGIT_INTERVAL,((uint8_t)data_get(DATA_CURRENT_TEMP)/1)*10);
 		display_setValue(DIGIT_DURATION,((uint8_t)data_get(DATA_CURRENT_TEMP)%1)*10);
 		display_setValue(DIGIT_COUNTDOWN,i++);

@@ -23,7 +23,7 @@ float temp_getFloat(uint16_t val)
 }
 
 //call periodically to update current temp
-temp_updateTemp()
+void temp_updateTemp()
 {
 	uint16_t result;
 	if (read16bitRegister(LM75A_REGISTER_TEMP, &result) == true)	//if successful

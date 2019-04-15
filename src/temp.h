@@ -26,6 +26,6 @@
 #define TEMP_MIN 15.0		//min temperature for temp adjustment
 
 void temp_init();
-float temp_getTemperature();
+void temp_updateTemp();
 
 #endif /* TEMP_H_ */
