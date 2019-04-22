@@ -23,7 +23,7 @@ volatile uint8_t wdt_interrupt = 0;
 
 ISR(WDT_vect) {
 	wdt_interrupt = 1;
-	data_decCountdown(60);	//SET NORMAL
+	data_decCountdown(1);	//SET NORMAL
 }
 
 void state_machine();
