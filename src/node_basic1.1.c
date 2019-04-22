@@ -248,7 +248,6 @@ void state_machine()
 				first = 0;
 				display_clear();//deinit display
 			}
-
 		    set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//only wdt and pin interrupt
 		    cli();									//disable interrupts
 			sleep_enable();							//enable sleep
