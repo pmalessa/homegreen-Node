@@ -8,8 +8,8 @@
 #ifndef BUTTON_H_
 #define BUTTON_H_
 
-#define BUT_MINUS_INT PCINT17
-#define BUT_PLUS_INT PCINT18
+#define BUT_MINUS_INT PCINT18
+#define BUT_PLUS_INT PCINT17
 #define BUT_SET_INT PCINT19
 #define BUT_MAN_INT PCINT20
 
@@ -25,9 +25,9 @@ typedef enum{
 }button_press;
 
 typedef enum{
-	BUTTON_MINUS = PD1,
+	BUTTON_MINUS = PD3,
 	BUTTON_SET = PD2,
-	BUTTON_PLUS = PD3,
+	BUTTON_PLUS = PD1,
 	BUTTON_MAN = PD4,
 	NUM_BUTTONS
 }button_t;

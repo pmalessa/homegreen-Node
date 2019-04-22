@@ -19,11 +19,12 @@ uint16_t adcReadChannel(uint8_t channel);
 uint16_t measureVoltage();
 
 void power_init() {
-	//adc init
     ADCSRA = _BV(ADEN) | _BV(ADPS1) | _BV(ADPS0);	//DIV8
     ADCSRB = 0;
     measureVoltage();	//scrap measurement
     powerstate = power_isPowerConnected();
+    PWR_IN_DDR |= _BV(PWR_IN_PIN);
+    power_setInputPower(1);
 }
 
 void power_setCallback(void (*func)(void))	//set pin change callback function
@@ -64,7 +65,7 @@ void power_setInputPower(uint8_t state)
 {
 	if (state == 1)
 	{
-		PWR_IN_PORT |= _BV(PWR_IN_PIN);
+		PWR_IN_PORT |= _BV(PWR_IN_PIN); //active high
 	}
 	else
 	{

@@ -12,6 +12,7 @@
 #include "display.h"
 #include "button.h"
 #include "power.h"
+#include "buzzer.h"
 
 void timer_init()
 {
@@ -26,10 +27,16 @@ void timer_init()
 //1ms
 ISR(TIMER0_COMPA_vect)
 {
-	static uint16_t cnt = 0, cnt2 = 0, cnt3 = 0;
+	static uint16_t cnt = 0, cnt2 = 0, cnt3 = 0, cnt4 = 0;
 	cnt++;
 	cnt2++;
 	cnt3++;
+	cnt4++;
+	if(cnt4 > 10)	//10ms
+	{
+		cnt4=0;
+		//buzzer_SyncTask();
+	}
 	if(cnt > 100)	//100ms
 	{
 		cnt = 0;
