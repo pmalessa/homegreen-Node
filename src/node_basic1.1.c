@@ -79,6 +79,7 @@ int main (void) {
 	display_init();
 	temp_init();
 
+	display_boot();
 	sei();
 
 	while(1)
@@ -247,6 +248,7 @@ void state_machine()
 			{
 				first = 0;
 				display_clear();//deinit display
+				power_setInputPower(0);
 			}
 		    set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//only wdt and pin interrupt
 		    cli();									//disable interrupts
@@ -257,20 +259,24 @@ void state_machine()
 			sleep_disable();						//disable sleep
 		    sei();									//enable interrupts
 		    //waked up
+
 			if(wdt_interrupt == 1)	//wdt interrupt wakeup
 			{
 				wdt_interrupt = 0;
 				if(data_getCountdown() == 0)
 				{
+					power_setInputPower(1);
 					display_init();
 					switchTo(STATE_DISPLAY);
 				}
 			}
 			else if(button_anyPressed())	//button interrupt wakeup
 			{
+				power_setInputPower(1);
 				display_init();
 				switchTo(STATE_DISPLAY);
 			}
+
 			break;
 		case STATE_PUMPING:
 		case STATE_MAN_PUMPING:

@@ -27,6 +27,31 @@ void display_init()
 	}
 }
 
+void display_boot()
+{
+	display_clear();
+	display_setByte(0, 0x76); //H
+	_delay_ms(100);
+	display_setByte(1, 0x79); //E
+	_delay_ms(100);
+	display_setByte(2, 0x38); //L
+	_delay_ms(100);
+	display_setByte(3, 0x38); //L
+	_delay_ms(100);
+	display_setByte(4, 0x3F); //O
+	_delay_ms(100);
+	display_setByte(0, 0x00);
+	_delay_ms(100);
+	display_setByte(1, 0x00);
+	_delay_ms(100);
+	display_setByte(2, 0x00);
+	_delay_ms(100);
+	display_setByte(3, 0x00);
+	_delay_ms(100);
+	display_setByte(4, 0x00);
+	_delay_ms(100);
+}
+
 void display_clear()
 {
 	tm1637_Clear();
