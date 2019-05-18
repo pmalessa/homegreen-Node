@@ -7,6 +7,7 @@
 #include "data.h"
 #include "temp.h"
 #include "button.h"
+#include "buzzer.h"
 
 typedef enum{
 	STATE_BOOT,
@@ -80,6 +81,7 @@ int main (void) {
 	data_init();
 	display_init();
 	temp_init();
+	//buzzer_init();
 
 	//display_boot();
 	display_clear();
@@ -91,6 +93,7 @@ int main (void) {
 	display_setByte(5,(reset_flag&_BV(0)) ? 1 : 0); //reset_flag bit 0
 	_delay_ms(1000);
 	display_boot();
+	//buzzer_playTone(TONE_BOOT);
 	sei();
 
 	while(1)

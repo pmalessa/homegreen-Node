@@ -14,6 +14,7 @@
 #define TONE_BOOT 1
 
 void buzzer_init();
+void buzzer_playTone(uint8_t tone_id);
 void buzzer_SyncTask();
 
 #endif /* BUZZER_H_ */
