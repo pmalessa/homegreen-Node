@@ -65,6 +65,8 @@ void powerchange_callback()
 int main (void) {
 	//watchdog init
 	cli();
+	uint8_t reset_flag = MCUSR;
+	MCUSR = 0;
 	MCUSR &= ~(1<<WDRF);								//unlock step 1
 	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
 	WDTCSR = (1 << WDIE) | (1 << WDP2) | (1 << WDP1); 	//Set to Interrupt Mode and "every 1 s"
@@ -79,6 +81,15 @@ int main (void) {
 	display_init();
 	temp_init();
 
+	//display_boot();
+	display_clear();
+	display_setByte(0,0); //F
+	display_setByte(1,0); //L
+	display_setByte(2,(reset_flag&_BV(3)) ? 1 : 0); //reset_flag bit 3
+	display_setByte(3,(reset_flag&_BV(2)) ? 1 : 0); //reset_flag bit 2
+	display_setByte(4,(reset_flag&_BV(1)) ? 1 : 0); //reset_flag bit 1
+	display_setByte(5,(reset_flag&_BV(0)) ? 1 : 0); //reset_flag bit 0
+	_delay_ms(1000);
 	display_boot();
 	sei();
 
