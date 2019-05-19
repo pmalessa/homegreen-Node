@@ -83,17 +83,9 @@ int main (void) {
 
 	sei();
 
-	//temp_updateTemp();
-
-	uint8_t i = 0;
 	while(1)
 	{
-		//state_machine();
-		//temp_updateTemp();
-		display_setValue(DIGIT_INTERVAL,(data_get(DATA_CURRENT_TEMP)/10));
-		display_setValue(DIGIT_DURATION,(data_get(DATA_CURRENT_TEMP)%10));
-		display_setValue(DIGIT_COUNTDOWN,i++);
-		_delay_ms(500);
+		state_machine();
 	}
 }
 
