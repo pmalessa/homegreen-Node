@@ -7,48 +7,64 @@
 
 #include "PLATFORM.h"
 #include "temp.h"
-#include "TinyWire.h"
+#include "i2cmaster.h"
+#include "data.h"
 
 bool read16bitRegister(uint8_t reg, uint16_t* response);
 
 void temp_init()
 {
-	TinyWire_begin();
+	i2c_init();
 }
 
-float temp_getTemperature()
+float temp_getFloat(uint16_t val)
+{
+	return (float)val / 256.0f;
+}
+
+//call periodically to update current temp
+void temp_updateTemp()
 {
 	uint16_t result;
-	if (!read16bitRegister(LM75A_REGISTER_TEMP, &result))
+	if (read16bitRegister(LM75A_REGISTER_TEMP, &result) == true)	//if successful
 	{
-		return LM75A_INVALID_TEMPERATURE;
+		data_set(DATA_CURRENT_TEMP,(result >> 7)*5); //turn into 0.1 Degree resolution -> 22.5 Deg => 225
 	}
-	return (float)result / 256.0f;
 }
 
 bool read16bitRegister(uint8_t reg, uint16_t* response)
 {
-	uint8_t result;
-
-	TinyWire_beginTransmission(0x48);
-	TinyWire_writeOne(reg);
-	result = TinyWire_endTransmission(true);
-	// result is 0-4
-	if (result != 0)
+	if(i2c_start(LM75A_DEFAULT_ADDRESS+I2C_WRITE) == 1)
 	{
-		return false;
+		return false; //error
 	}
-
-	result = TinyWire_requestFrom(0x48, (uint8_t)2, 0, 0, true);
-	if (result != 2)
-	{
-		return false;
-	}
-	uint8_t part1 = TinyWire_read();
-	uint8_t part2 = TinyWire_read();
-
-	//response = (Wire.read() << 8) | Wire.read();
-	uint16_t temp = part1 << 8 | part2;
-	*response = part1 << 8 | part2;
+	i2c_write(reg);
+	i2c_rep_start(LM75A_DEFAULT_ADDRESS+I2C_READ);
+	*response = i2c_readAck() << 8;
+	*response |= i2c_readNak();
+	i2c_stop();
 	return true;
+}
+
+//Adjust temperature by TEMP_ADJ_FACTOR in percent per degree of temperature
+//only adjust if TEMP_MIN is reached.
+//value returned is a percentage to multiply with duration to get the value to add
+uint16_t temp_getTempAdjustFactor()
+{
+	if(temp_getFloat(data_get(DATA_CURRENT_TEMP)) > TEMP_MIN)
+	{
+		float diff = temp_getFloat(data_get(DATA_CURRENT_TEMP) - data_get(DATA_SETUP_TEMP));
+		if(diff < 0)	//current temp smaller than setup temp
+		{
+			return 0;	//no adjustment
+		}
+		else
+		{
+			return (uint16_t)diff*TEMP_ADJ_FACTOR;
+		}
+	}
+	else
+	{
+		return 0;	//no adjustment
+	}
 }

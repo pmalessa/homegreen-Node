@@ -81,7 +81,7 @@ int main (void) {
 	data_init();
 	display_init();
 	temp_init();
-	//buzzer_init();
+	buzzer_init();
 
 	//display_boot();
 	display_clear();
