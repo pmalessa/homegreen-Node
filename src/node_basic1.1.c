@@ -78,6 +78,8 @@ int main (void) {
 	data_init();
 	display_init();
 	temp_init();
+	BUZZER_DDR |= _BV(BUZZER_PIN);
+	BUZZER_PORT &= ~_BV(BUZZER_PIN);
 
 	sei();
 
@@ -88,8 +90,8 @@ int main (void) {
 	{
 		//state_machine();
 		//temp_updateTemp();
-		display_setValue(DIGIT_INTERVAL,((uint8_t)data_get(DATA_CURRENT_TEMP)/1)*10);
-		display_setValue(DIGIT_DURATION,((uint8_t)data_get(DATA_CURRENT_TEMP)%1)*10);
+		display_setValue(DIGIT_INTERVAL,(data_get(DATA_CURRENT_TEMP)/10));
+		display_setValue(DIGIT_DURATION,(data_get(DATA_CURRENT_TEMP)%10));
 		display_setValue(DIGIT_COUNTDOWN,i++);
 		_delay_ms(500);
 	}

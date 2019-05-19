@@ -7,14 +7,14 @@
 
 #include "PLATFORM.h"
 #include "temp.h"
-#include "i2c_master.h"
+#include "i2cmaster.h"
 #include "data.h"
 
 bool read16bitRegister(uint8_t reg, uint16_t* response);
 
 void temp_init()
 {
-	i2c_master_init();
+	i2c_init();
 }
 
 float temp_getFloat(uint16_t val)
@@ -28,26 +28,21 @@ void temp_updateTemp()
 	uint16_t result;
 	if (read16bitRegister(LM75A_REGISTER_TEMP, &result) == true)	//if successful
 	{
-		data_set(DATA_CURRENT_TEMP,result);
+		data_set(DATA_CURRENT_TEMP,(result >> 7)*5); //turn into 0.1 Degree resolution -> 22.5 Deg => 225
 	}
 }
 
 bool read16bitRegister(uint8_t reg, uint16_t* response)
 {
-	uint8_t msg[2];
-
-	msg[0] = (LM75A_DEFAULT_ADDRESS<<TWI_ADR_BITS) | (false<<TWI_READ_BIT);	//set write bit
-	msg[1] = reg;
-	i2c_master_startData(msg,2);
-
-	while(i2c_master_isBusy()); //wait
-
-	msg[0] = (LM75A_DEFAULT_ADDRESS<<TWI_ADR_BITS) | (true<<TWI_READ_BIT);	//set read bit
-	i2c_master_startData(msg,1);
-
-	i2c_master_getData(msg,2);
-
-	*response = msg[0] << 8 | msg[1];
+	if(i2c_start(LM75A_DEFAULT_ADDRESS+I2C_WRITE) == 1)
+	{
+		return false; //error
+	}
+	i2c_write(reg);
+	i2c_rep_start(LM75A_DEFAULT_ADDRESS+I2C_READ);
+	*response = i2c_readAck() << 8;
+	*response |= i2c_readNak();
+	i2c_stop();
 	return true;
 }
 

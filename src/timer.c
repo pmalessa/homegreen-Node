@@ -48,7 +48,7 @@ ISR(TIMER0_COMPA_vect)
 		cnt3 = 0;
 		button_SyncTask();
 	}
-	if(cnt5 > 9999)	//every 10s
+	if(cnt5 > 5000)	//every 5s
 	{
 		cnt5 = 0;
 		temp_updateTemp();
