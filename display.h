@@ -9,6 +9,7 @@
 #define DISPLAY_H_
 
 void display_init();
+void display_boot();
 void display_clear();
 void display_declear();
 void display_SyncTask(); //1ms

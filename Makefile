@@ -1,7 +1,7 @@
-TARGET=node_basic1.1
+TARGET=hg_node_basic
 MCU=attiny88
 F_CPU=1000000
-SOURCES=node_basic1.1.c tm1637.c timer.c button.c pump.c buzzer.c display.c power.c data.c I2C_Master.c TinyWire.c temp.c
+SOURCES=hg_node_basic.c tm1637.c timer.c button.c pump.c buzzer.c display.c power.c data.c twimaster.c temp.c
 
 PROGRAMMER=arduino
 #auskommentieren für automatische Wahl

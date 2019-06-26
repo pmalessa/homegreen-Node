@@ -16,15 +16,23 @@
 #include <avr/sleep.h>
 #include <stdlib.h>
 
-#define BUILD_DATE 20190404
+#define BUILD_DATE 20190422
 
 #define BUZZER_DDR DDRB
 #define BUZZER_PORT PORTB
 #define BUZZER_PIN PB1
 
-#define PWR_IN_DDR DDRC
-#define PWR_IN_PORT PORTC
-#define PWR_IN_PIN PC3
+#define PWR_IN1_DDR DDRC
+#define PWR_IN1_PORT PORTC
+#define PWR_IN1_PIN PC3
+
+#define PWR_IN2_DDR DDRB
+#define PWR_IN2_PORT PORTB
+#define PWR_IN2_PIN PB2
+
+#define PWR_LOAD_DDR DDRC
+#define PWR_LOAD_PORT PORTC
+#define PWR_LOAD_PIN PC2
 
 #define SLEEP_INTERVAL_S 4	//4000ms = 4s
 #define DISPLAY_TIMEOUT_S 15 //30sec

@@ -15,15 +15,16 @@ uint32_t countdown = 0;
 
 void data_init()
 {
-	if(!(eeprom_read_dword((uint32_t *)DATA_ADR_INIT_CONST) == DATA_INIT_CONST))
+	if(!(eeprom_read_dword((uint32_t *)ADR_INIT_CONST) == DATA_INIT_CONST))
 	{
 		data_set(DATA_INTERVAL,DATA_INTERVAL_DEFAULT);	//set default values
 		data_set(DATA_DURATION,DATA_DURATION_DEFAULT);
+		data_set(DATA_SETUP_TEMP,DATA_SETUP_TEMP_DEFAULT);
 		data_save();
-		eeprom_write_dword((uint32_t *)DATA_ADR_INIT_CONST, DATA_INIT_CONST);	//set init constant
+		eeprom_write_dword((uint32_t *)ADR_INIT_CONST, DATA_INIT_CONST);	//set init constant
 	}
-	data[DATA_INTERVAL] = eeprom_read_word((uint16_t *)DATA_ADR_INTERVAL);
-	data[DATA_DURATION] = eeprom_read_word((uint16_t *)DATA_ADR_DURATION);
+	data[DATA_INTERVAL] = eeprom_read_word((uint16_t *)ADR_INTERVAL);
+	data[DATA_DURATION] = eeprom_read_word((uint16_t *)ADR_DURATION);
 	data_resetCountdown();
 }
 
@@ -56,15 +57,40 @@ void data_decrement(data_type_t data_type)
 
 void data_set(data_type_t data_type, uint16_t val)
 {
-	if(val > 0 && val <= 990)
-	{
-		data[data_type] = val;
+	switch (data_type) {
+		case DATA_INTERVAL:
+		case DATA_DURATION:
+		case DATA_PUMP_DURATION:
+			if(val > 0 && val <= 990)
+			{
+				data[data_type] = val;
+			}
+			break;
+		case DATA_SETUP_TEMP:
+		case DATA_CURRENT_TEMP:
+			data[data_type] = val;
+			break;
+		default:
+			break;
 	}
 }
 
 uint16_t data_get(data_type_t data_type)
 {
-	return data[data_type];
+	switch (data_type) {
+		case DATA_INTERVAL:
+		case DATA_DURATION:
+		case DATA_PUMP_DURATION:
+			return data[data_type];
+			break;
+		case DATA_SETUP_TEMP:
+		case DATA_CURRENT_TEMP:
+			return data[data_type];
+			break;
+		default:
+			return 0;
+			break;
+	}
 }
 
 void data_decCountdown(uint8_t sec)
@@ -96,6 +122,11 @@ uint16_t data_getCountdownDisplay()
 
 void data_save()
 {
-	eeprom_write_word((uint16_t *)DATA_ADR_INTERVAL, data[DATA_INTERVAL]);	//save interval
-	eeprom_write_word((uint16_t *)DATA_ADR_DURATION, data[DATA_DURATION]);	//save duration
+	cli();
+	_delay_ms(10);
+	eeprom_write_word((uint16_t *)ADR_INTERVAL, data[DATA_INTERVAL]);		//save interval
+	eeprom_write_word((uint16_t *)ADR_DURATION, data[DATA_DURATION]);		//save duration
+	eeprom_write_word((uint16_t *)ADR_SETUP_TEMP, data[DATA_SETUP_TEMP]);	//save setup temp
+	_delay_ms(10);
+	sei();
 }

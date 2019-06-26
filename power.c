@@ -9,7 +9,7 @@
 #include "power.h"
 
 uint16_t volatile curVol = 3000;
-uint8_t volatile powerstate = 0;
+uint8_t volatile curPowerState = 0;
 void power_dummy_callback()
 {
 }
@@ -19,11 +19,16 @@ uint16_t adcReadChannel(uint8_t channel);
 uint16_t measureVoltage();
 
 void power_init() {
-	//adc init
     ADCSRA = _BV(ADEN) | _BV(ADPS1) | _BV(ADPS0);	//DIV8
     ADCSRB = 0;
     measureVoltage();	//scrap measurement
-    powerstate = power_isPowerConnected();
+    curPowerState = power_isPowerConnected();
+    PWR_IN1_DDR |= _BV(PWR_IN1_PIN);
+    PWR_IN2_DDR |= _BV(PWR_IN2_PIN);
+    PWR_LOAD_DDR |= _BV(PWR_LOAD_PIN);
+
+    PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
+    power_setInputPower(0);
 }
 
 void power_setCallback(void (*func)(void))	//set pin change callback function
@@ -64,19 +69,24 @@ void power_setInputPower(uint8_t state)
 {
 	if (state == 1)
 	{
-		PWR_IN_PORT |= _BV(PWR_IN_PIN);
+		PWR_IN1_PORT |= _BV(PWR_IN1_PIN); 		//turn on PB1
+		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
+		_delay_ms(500);
+		PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
 	}
 	else
 	{
-		PWR_IN_PORT &= ~(_BV(PWR_IN_PIN));
+		PWR_IN1_PORT &= ~(_BV(PWR_IN1_PIN));
 	}
 }
 
 void power_SyncTask()	//every second
 {
-	if(power_isPowerConnected() != powerstate)	//if power state changed
+	static uint8_t newPowerState = 0;
+	newPowerState = power_isPowerConnected();	//measure PowerState
+	if(newPowerState != curPowerState)			//if PowerState changed
 	{
-		powerstate = power_isPowerConnected();
-		power_callback();	//call callback
+		curPowerState = newPowerState;			//save new PowerState
+		power_callback();						//call callback to notify
 	}
 }

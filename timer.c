@@ -12,6 +12,8 @@
 #include "display.h"
 #include "button.h"
 #include "power.h"
+#include "buzzer.h"
+#include "temp.h"
 
 void timer_init()
 {
@@ -26,10 +28,17 @@ void timer_init()
 //1ms
 ISR(TIMER0_COMPA_vect)
 {
-	static uint16_t cnt = 0, cnt2 = 0, cnt3 = 0;
+	static uint16_t cnt = 0, cnt2 = 0, cnt3 = 0, cnt4 = 0, cnt5 = 0;
 	cnt++;
 	cnt2++;
 	cnt3++;
+	cnt4++;
+	cnt5++;
+	if(cnt4 > 10)	//10ms
+	{
+		cnt4=0;
+		//buzzer_SyncTask();
+	}
 	if(cnt > 100)	//100ms
 	{
 		cnt = 0;
@@ -45,5 +54,10 @@ ISR(TIMER0_COMPA_vect)
 	{
 		cnt3 = 0;
 		button_SyncTask();
+	}
+	if(cnt5 > 5000)	//every 5s
+	{
+		cnt5 = 0;
+//		temp_updateTemp();
 	}
 }
