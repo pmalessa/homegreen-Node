@@ -38,6 +38,7 @@ void buzzer_init()
 	TCCR1B = (1<< WGM12) | (1 << CS11);	//CTC, Prescaler 8
 
 	BUZZER_DDR |= _BV(BUZZER_PIN); //Set Buzzer pin as output
+	TCCR1A &= ~(1<<COM1A0);	//disable output
 }
 
 void buzzer_playTone(uint8_t tone_id)
@@ -50,13 +51,53 @@ void buzzer_playTone(uint8_t tone_id)
 			*/
 			TCCR1A = (1<<COM1A0);	//enable output
 			set_freq(1000);
-			_delay_ms(200);
+			_delay_ms(100);
 			set_freq(1500);
-			_delay_ms(200);
+			_delay_ms(100);
 			set_freq(2000);
-			_delay_ms(200);
+			_delay_ms(100);
+			TCCR1A &= ~(1<<COM1A0);	//disable output
+			break;
+		case TONE_BOOT2:
+			/*
+			playing = 1;
+			buf = boot;
+			*/
+			set_freq(2000);
+			TCCR1A = (1<<COM1A0);	//enable output
+			_delay_ms(100);
+			TCCR1A &= ~(1<<COM1A0);	//disable output
+			_delay_ms(100);
+			TCCR1A = (1<<COM1A0);	//enable output
+			_delay_ms(100);
+			TCCR1A &= ~(1<<COM1A0);	//disable output
+			break;
+		case TONE_POW_UP:
+			set_freq(2000);
+			TCCR1A = (1<<COM1A0);	//enable output
+			_delay_ms(50);
 			set_freq(3000);
-			_delay_ms(200);
+			_delay_ms(50);
+			TCCR1A &= ~(1<<COM1A0);	//disable output
+			break;
+		case TONE_POW_DOWN:
+			set_freq(3000);
+			TCCR1A = (1<<COM1A0);	//enable output
+			_delay_ms(80);
+			set_freq(2000);
+			_delay_ms(80);
+			TCCR1A &= ~(1<<COM1A0);	//disable output
+			break;
+		case TONE_CLICK:
+			set_freq(3000);
+			TCCR1A = (1<<COM1A0);	//enable output
+			_delay_ms(2);
+			TCCR1A &= ~(1<<COM1A0);	//disable output
+			break;
+		case TONE_BUT_CLICK:
+			set_freq(1500);
+			TCCR1A = (1<<COM1A0);	//enable output
+			_delay_ms(2);
 			TCCR1A &= ~(1<<COM1A0);	//disable output
 			break;
 		default:

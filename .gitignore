@@ -4,3 +4,8 @@
 *.o
 *.elf
 *.hex
+*.atsln
+*.xml
+*.cproj
+.vs/
+Debug/

@@ -122,7 +122,11 @@ uint16_t data_getCountdownDisplay()
 
 void data_save()
 {
+	cli();
+	_delay_ms(10);
 	eeprom_write_word((uint16_t *)ADR_INTERVAL, data[DATA_INTERVAL]);		//save interval
 	eeprom_write_word((uint16_t *)ADR_DURATION, data[DATA_DURATION]);		//save duration
 	eeprom_write_word((uint16_t *)ADR_SETUP_TEMP, data[DATA_SETUP_TEMP]);	//save setup temp
+	_delay_ms(10);
+	sei();
 }

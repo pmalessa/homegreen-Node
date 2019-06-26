@@ -58,6 +58,6 @@ ISR(TIMER0_COMPA_vect)
 	if(cnt5 > 5000)	//every 5s
 	{
 		cnt5 = 0;
-		temp_updateTemp();
+//		temp_updateTemp();
 	}
 }
