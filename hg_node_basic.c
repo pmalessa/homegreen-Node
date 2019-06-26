@@ -44,23 +44,7 @@ void anypress_callback()	//called if any Button pressed or released
 	buzzer_playTone(TONE_BUT_CLICK);//buzzer sound
 }
 
-void powerchange_callback()	//called if power source changed BAT->PB or PB->BAT mööp 1 otterdamoo <3
-{
-	
-	if(power_isPowerConnected())	//BAT -> PB
-	{
-		/*
-		buzzer_playTone(TONE_POW_UP);
-		display_init();
-		switchTo(STATE_DISPLAY);
-		*/
-	}
-	else	//PB -> BAT
-	{
-		pump_disable();
-		switchTo(STATE_SLEEP);
-	}
-}
+//mööp 1 otterdamoo <3
 
 int main (void) {
 	//watchdog init
@@ -76,7 +60,6 @@ int main (void) {
 	button_setPCCallback(&anypress_callback);
 	pump_init();
 	power_init();
-	power_setCallback(&powerchange_callback);
 	data_init();
 //	temp_init();
 	buzzer_init();
@@ -159,6 +142,11 @@ void state_machine()
 					switchTo(STATE_PUMPING);
 					break;
 				}
+				if(!power_isPowerConnected()) //if power lost
+				{
+					switchTo(STATE_SLEEP);
+					break;
+				}
 			}
 			if((button_isPressed(BUTTON_MAN) == BUTTON_LONG_PRESSING))	//switch to MAN_PUMPING
 			{
@@ -191,6 +179,11 @@ void state_machine()
 			{
 				prev_countdown = data_getCountdown();
 				display_setValue(DIGIT_COUNTDOWN,data_getCountdownDisplay());
+				if(!power_isPowerConnected()) //if power lost
+				{
+					switchTo(STATE_SLEEP);
+					break;
+				}
 			}
 			press = button_isPressed(BUTTON_PLUS);							//get Button Plus Press
 			if(press == BUTTON_LONG_PRESSING)								//if long Press
@@ -276,7 +269,7 @@ void state_machine()
 				if(data_getCountdown() == 0)		//if countdown reached
 				{
 					power_setInputPower(1);			//enable Powerbank
-					_delay_ms(500);					//wait for Powerbank to turn on
+					_delay_ms(200);					//wait for Powerbank to turn on
 					if(power_isPowerConnected())	//check if Powerbank connected
 					{
 						display_init();

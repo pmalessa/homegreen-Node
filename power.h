@@ -14,7 +14,6 @@
 #define POWER_THRESHOLD 3300
 
 void power_init();
-void power_setCallback(void (*func)(void));	//set pin change callback function
 uint8_t power_isPowerConnected();
 void power_setInputPower(uint8_t state);
 

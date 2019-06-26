@@ -43,12 +43,12 @@ ISR(TIMER0_COMPA_vect)
 	{
 		cnt = 0;
 		display_SyncTask();
+		power_SyncTask();
 	}
 	if(cnt2 > 1000)	//1000ms
 	{
 		cnt2 = 0;
 		pump_vSyncTask();
-		power_SyncTask();
 	}
 	if(cnt3 > 50)	//50ms
 	{

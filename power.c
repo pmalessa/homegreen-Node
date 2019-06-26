@@ -8,12 +8,7 @@
 #include "PLATFORM.h"
 #include "power.h"
 
-uint16_t volatile curVol = 3000;
-uint8_t volatile curPowerState = 0;
-void power_dummy_callback()
-{
-}
-void (*power_callback)(void) = &power_dummy_callback;
+uint8_t LoadCounter = 0;
 
 uint16_t adcReadChannel(uint8_t channel);
 uint16_t measureVoltage();
@@ -22,18 +17,13 @@ void power_init() {
     ADCSRA = _BV(ADEN) | _BV(ADPS1) | _BV(ADPS0);	//DIV8
     ADCSRB = 0;
     measureVoltage();	//scrap measurement
-    curPowerState = power_isPowerConnected();
     PWR_IN1_DDR |= _BV(PWR_IN1_PIN);
     PWR_IN2_DDR |= _BV(PWR_IN2_PIN);
     PWR_LOAD_DDR |= _BV(PWR_LOAD_PIN);
 
     PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
+	PWR_IN2_PORT &= ~(_BV(PWR_IN2_PIN));	//turn off PB2
     power_setInputPower(0);
-}
-
-void power_setCallback(void (*func)(void))	//set pin change callback function
-{
-	power_callback = func;
 }
 
 uint16_t adcReadChannel(uint8_t channel) {
@@ -51,10 +41,9 @@ uint16_t measureVoltage(){
 	return result;
 }
 
-//return if last measured CurVol lower than Threshold
-uint8_t power_isPowerConnected()
+uint8_t power_isPowerConnected()	//return if last measured CurVol lower than Threshold
 {
-	curVol = measureVoltage();
+	uint16_t curVol = measureVoltage();
 	if(curVol > POWER_THRESHOLD)
 	{
 		return 1;
@@ -69,24 +58,26 @@ void power_setInputPower(uint8_t state)
 {
 	if (state == 1)
 	{
-		PWR_IN1_PORT |= _BV(PWR_IN1_PIN); 		//turn on PB1
+		PWR_IN1_PORT |= _BV(PWR_IN1_PIN); 		//turn on PB
 		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
-		_delay_ms(500);
-		PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
+		LoadCounter = 5;
 	}
 	else
 	{
-		PWR_IN1_PORT &= ~(_BV(PWR_IN1_PIN));
+		PWR_IN1_PORT &= ~(_BV(PWR_IN1_PIN));	//turn off PB
+		LoadCounter = 0;
 	}
 }
 
-void power_SyncTask()	//every second
+void power_SyncTask()	//every 100ms
 {
-	static uint8_t newPowerState = 0;
-	newPowerState = power_isPowerConnected();	//measure PowerState
-	if(newPowerState != curPowerState)			//if PowerState changed
+	if(LoadCounter)
 	{
-		curPowerState = newPowerState;			//save new PowerState
-		power_callback();						//call callback to notify
+		LoadCounter--;
+		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
+	}
+	else
+	{
+		PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
 	}
 }
