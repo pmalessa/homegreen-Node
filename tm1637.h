@@ -58,6 +58,7 @@
 #define TM1637_DIGITS   6
 
 void tm1637_Init();
+void tm1637_deInit();
 void tm1637_Clear();	// Clear the 7-segment displays (only)
 void tm1637_setByte(uint8_t position, uint8_t b); // Set a single 7-segment display to the given byte value.
 void setDigit(uint8_t position, uint8_t digit); // Display a single digit at the given position.

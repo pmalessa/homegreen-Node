@@ -27,6 +27,11 @@ void display_init()
 	}
 }
 
+void display_deInit()
+{
+	tm1637_deInit();
+}
+
 void display_boot()
 {
 	display_clear();

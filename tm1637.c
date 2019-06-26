@@ -159,6 +159,12 @@ void tm1637_Init()
     tm1637_Clear();
 }
 
+void tm1637_deInit()
+{
+	TM_CLK_LOW();
+	TM_DAT_LOW();
+}
+
 void tm1637_Clear()
 {
     for (uint8_t a = 0; a != TM1637_DIGITS; ++a)

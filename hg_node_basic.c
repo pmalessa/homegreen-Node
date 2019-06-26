@@ -254,7 +254,7 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				//display_clear();					//deinit display
+				display_deInit();
 				buzzer_playTone(TONE_POW_DOWN);
 				power_setInputPower(0);				//disable Powerbank
 			}

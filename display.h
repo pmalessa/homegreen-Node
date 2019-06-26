@@ -9,6 +9,7 @@
 #define DISPLAY_H_
 
 void display_init();
+void display_deInit();
 void display_boot();
 void display_clear();
 void display_declear();
