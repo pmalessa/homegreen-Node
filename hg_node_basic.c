@@ -46,20 +46,20 @@ void anypress_callback()	//called if any Button pressed or released
 
 void powerchange_callback()	//called if power source changed BAT->PB or PB->BAT mööp 1 otterdamoo <3
 {
-	/*
+	
 	if(power_isPowerConnected())	//BAT -> PB
 	{
+		/*
 		buzzer_playTone(TONE_POW_UP);
 		display_init();
 		switchTo(STATE_DISPLAY);
+		*/
 	}
 	else	//PB -> BAT
 	{
-		buzzer_playTone(TONE_POW_DOWN);
 		pump_disable();
 		switchTo(STATE_SLEEP);
 	}
-	*/
 }
 
 int main (void) {
