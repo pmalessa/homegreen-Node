@@ -41,7 +41,6 @@ void state_machine();
 void anypress_callback()	//called if any Button pressed or released
 {
 	display_resettimeout();
-	buzzer_playTone(TONE_BUT_CLICK);//buzzer sound
 }
 
 //mööp 1 otterdamoo <3
@@ -150,6 +149,7 @@ void state_machine()
 			}
 			if((button_isPressed(BUTTON_MAN) == BUTTON_LONG_PRESSING))	//switch to MAN_PUMPING
 			{
+				buzzer_playTone(TONE_CLICK);//buzzer sound
 				display_clear();
 				display_setByte(4,0x3F);	//O
 				display_setByte(5,0x54);	//N
@@ -160,6 +160,7 @@ void state_machine()
 			}
 			if((button_isPressed(BUTTON_SET) == BUTTON_LONG_PRESSING))
 			{
+				buzzer_playTone(TONE_CLICK);//buzzer sound
 				fade();
 				switchTo(STATE_CONFIG);										//switch to CONFIG
 				break;
@@ -193,6 +194,7 @@ void state_machine()
 					data_increment(curdigit);
 					display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));	//todo: only curdigit
 					display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
+					buzzer_playTone(TONE_CLICK);//buzzer sound
 					_delay_ms(100);
 				}
 			}
@@ -201,6 +203,7 @@ void state_machine()
 				data_increment(curdigit);
 				display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));		//todo: only curdigit
 				display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
+				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
 			press = button_isPressed(BUTTON_MINUS);
 			if(press == BUTTON_LONG_PRESSING)								//if long Press
@@ -210,6 +213,7 @@ void state_machine()
 					data_decrement(curdigit);
 					display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));	//todo: only curdigit
 					display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
+					buzzer_playTone(TONE_CLICK);//buzzer sound
 					_delay_ms(100);
 				}
 			}
@@ -218,6 +222,7 @@ void state_machine()
 				data_decrement(curdigit);
 				display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));	//todo: only curdigit
 				display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
+				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
 			press = button_isPressed(BUTTON_SET);							//get Set Button Press
 			if(press == BUTTON_LONG_PRESSING || display_gettimeout() == 0)	//Long Press or IDLE timeout, Config done
@@ -227,10 +232,12 @@ void state_machine()
 				fade();
 				data_resetCountdown();										//reset Countdown
 				switchTo(STATE_DISPLAY);									//switch to State Display
+				buzzer_playTone(TONE_CLICK);//buzzer sound
 				break;
 			}
 			else if(press == BUTTON_SHORT_PRESS)							//Short SET Press, switch selected Digit
 			{
+				buzzer_playTone(TONE_CLICK);//buzzer sound
 				if(curdigit == DIGIT_DURATION)
 				{
 					curdigit = DIGIT_INTERVAL;
@@ -251,6 +258,7 @@ void state_machine()
 				buzzer_playTone(TONE_POW_DOWN);
 				power_setInputPower(0);				//disable Powerbank
 			}
+			while(buzzer_isPlaying());				//wait while buzzer active
 		    set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//Sleep mode: only wdt and pin interrupt
 		    cli();									//disable interrupts
 			sleep_enable();							//enable sleep
@@ -265,7 +273,7 @@ void state_machine()
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
 			{
 				wdt_interrupt = 0;
-				buzzer_playTone(TONE_CLICK);
+				buzzer_playTone(TONE_HEARTBEAT);
 				if(data_getCountdown() == 0)		//if countdown reached
 				{
 					power_setInputPower(1);			//enable Powerbank
@@ -321,6 +329,7 @@ void state_machine()
 			press = button_isPressed(BUTTON_MAN);
 			if(press == BUTTON_LONG_PRESSING)				//if Button MAN long pressed, disable Pump
 			{
+				buzzer_playTone(TONE_CLICK);//buzzer sound
 				display_clear();
 				display_setByte(3,0x3F);	//O
 				display_setByte(4,0x71);	//F
@@ -339,6 +348,7 @@ void state_machine()
 					data_increment(DATA_PUMP_DURATION);
 					pump_enable(data_get(DATA_PUMP_DURATION));
 					display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
+					buzzer_playTone(TONE_CLICK);//buzzer sound
 					_delay_ms(100);
 				}
 			}
@@ -347,6 +357,7 @@ void state_machine()
 				data_increment(DATA_PUMP_DURATION);
 				pump_enable(data_get(DATA_PUMP_DURATION));
 				display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
+				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
 
 			press = button_isPressed(BUTTON_MINUS);
@@ -357,6 +368,7 @@ void state_machine()
 					data_decrement(DATA_PUMP_DURATION);
 					pump_enable(data_get(DATA_PUMP_DURATION));
 					display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
+					buzzer_playTone(TONE_CLICK);//buzzer sound
 					_delay_ms(100);
 				}
 			}
@@ -365,6 +377,7 @@ void state_machine()
 				data_decrement(DATA_PUMP_DURATION);
 				pump_enable(data_get(DATA_PUMP_DURATION));
 				display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
+				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
 			break;
 		case STATE_PB_EMPTY:

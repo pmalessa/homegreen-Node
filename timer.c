@@ -34,11 +34,8 @@ ISR(TIMER0_COMPA_vect)
 	cnt3++;
 	cnt4++;
 	cnt5++;
-	if(cnt4 > 10)	//10ms
-	{
-		cnt4=0;
-		//buzzer_SyncTask();
-	}
+	buzzer_SyncTask();
+
 	if(cnt > 100)	//100ms
 	{
 		cnt = 0;
