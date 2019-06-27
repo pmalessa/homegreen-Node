@@ -98,7 +98,15 @@ uint8_t buzzer_isPlaying()
 //freq = 1..62500 Hz
 void set_freq(uint16_t hz)
 {
-	OCR1A = (62500/hz)-1;
+	if(hz == 0)
+	{
+		TCCR1A &= ~(1<<COM1A0);	//disable output
+	}
+	else
+	{
+		TCCR1A |= (1<<COM1A0);	//enable output
+		OCR1A = (62500/hz)-1;
+	}
 }
 
 void buzzer_SyncTask()	//1ms
@@ -111,14 +119,13 @@ void buzzer_SyncTask()	//1ms
 		{
 			cnt = 0;
 			ptr = 0;
-			TCCR1A &= ~(1<<COM1A0);	//disable output
+			set_freq(0); //turn off
 			tail = (tail + 1) % 10; //advance tail
 			return;
 		}
 		else if(cnt == 0)	//start of tone
 		{
 			set_freq(buffer[tail][ptr].freq);
-			TCCR1A |= (1<<COM1A0);	//enable output
 		}
 		else if(cnt >= buffer[tail][ptr].len)	//end of tone part, next tone part
 		{

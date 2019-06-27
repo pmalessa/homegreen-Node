@@ -98,6 +98,7 @@ void state_machine()
 			{
 				first = 0;
 				power_setInputPower(1);
+				_delay_ms(100);
 				if(power_isPowerConnected() == true)	//if PB connected
 				{
 					display_init();
@@ -305,6 +306,8 @@ void state_machine()
 				}
 				else								//if not, stay in sleep
 				{
+					power_setInputPower(0);				//disable Powerbank
+					buzzer_playTone(TONE_BOOT2);
 					//stay in sleep
 				}
 			}
@@ -379,6 +382,13 @@ void state_machine()
 				display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
 				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
+			
+			if(!power_isPowerConnected()) //if power lost
+			{
+				switchTo(STATE_SLEEP);
+				break;
+			}
+			
 			break;
 		case STATE_PB_EMPTY:
 			//play Buzzer alarm till PB available

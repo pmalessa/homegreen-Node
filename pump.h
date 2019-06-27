@@ -12,6 +12,14 @@
 #define PUMP_PORT PORTA
 #define PUMP_PIN PA1
 
+#define PUMP_SIG_DDR DDRC
+#define PUMP_SIG_PORT PORTC
+#define PUMP_SIG_PIN PC7
+
+#define PUMP_TEST_DDR DDRA
+#define PUMP_TEST_PORT PORTA
+#define PUMP_TEST_PIN PA0
+
 void pump_init();
 
 void pump_vSyncTask();	//10ms
