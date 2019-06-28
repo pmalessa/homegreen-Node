@@ -18,35 +18,66 @@ tone_t* buffer[10];	//an array of tone_t pointers
 uint8_t head = 0;
 uint8_t tail = 0;
 
-
-volatile uint8_t playing = 0;
-
 void set_freq(uint16_t hz);
+
+uint16_t freqTable[31] ={
+	0,		//not used
+	624,	//100Hz
+	311,	//200Hz
+	208,	//300Hz
+	156,	//400Hz
+	125,	//500Hz
+	103,	//600Hz
+	89,		//700Hz
+	78,		//800Hz
+	69,		//900Hz
+	62,		//1000Hz
+	56,		//1100Hz
+	52,		//1200Hz
+	48,		//1300Hz
+	44,		//1400Hz
+	41,		//1500Hz
+	39,		//1600Hz
+	36,		//1700Hz
+	34,		//1800Hz
+	32,		//1900Hz
+	31,		//2000Hz
+	29,		//2100Hz
+	28,		//2200Hz
+	27,		//2300Hz
+	26,		//2400Hz
+	25,		//2500Hz
+	24,		//2600Hz
+	23,		//2700Hz
+	22,		//2800Hz
+	21,		//2900Hz
+	20		//3000Hz
+};
 
 //freq_hz, length_ms
 tone_t boot_pb[4] ={
-	{1000, 100},
-	{1500, 100},
-	{2000, 100},
+	{20, 500},
+	{25, 500},
+	{30, 500},
 	{0,0}};
 tone_t boot_bat[4] ={
-	{2000, 200},
+	{20, 200},
 	{0, 200},
-	{2000, 200},
+	{20, 200},
 	{0,0}};
 tone_t click[2] ={
-	{3000, 2},
+	{30, 2},
 	{0,0}};
 tone_t heartbeat[2] ={
-	{4000, 5},
+	{30, 5},
 	{0,0}};
-tone_t powUp[5] ={
-	{2000, 50},
-	{3000, 50},
+tone_t powUp[3] ={
+	{20, 100},
+	{30, 100},
 	{0,0}};
-tone_t powDown[5] ={
-	{3000, 50},
-	{2000, 50},
+tone_t powDown[3] ={
+	{30, 100},
+	{20, 100},
 	{0,0}};
 
 void buzzer_init()
@@ -102,10 +133,10 @@ void set_freq(uint16_t hz)
 	{
 		TCCR1A &= ~(1<<COM1A0);	//disable output
 	}
-	else
+	else if(hz <=30)
 	{
 		TCCR1A |= (1<<COM1A0);	//enable output
-		OCR1A = (62500/hz)-1;
+		OCR1A = freqTable[hz];	//62500/hz -1
 	}
 }
 
@@ -121,18 +152,20 @@ void buzzer_SyncTask()	//1ms
 			ptr = 0;
 			set_freq(0); //turn off
 			tail = (tail + 1) % 10; //advance tail
-			return;
 		}
 		else if(cnt == 0)	//start of tone
 		{
 			set_freq(buffer[tail][ptr].freq);
+			cnt++;
 		}
 		else if(cnt >= buffer[tail][ptr].len)	//end of tone part, next tone part
 		{
 			cnt = 0;
 			ptr++;	//move to next buffer position
-			return;
 		}
-		cnt++;
+		else
+		{
+			cnt++;
+		}
 	}
 }

@@ -383,11 +383,14 @@ void state_machine()
 				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
 			
+			
 			if(!power_isPowerConnected()) //if power lost
 			{
+				pump_disable();
 				switchTo(STATE_SLEEP);
 				break;
 			}
+			
 			
 			break;
 		case STATE_PB_EMPTY:
