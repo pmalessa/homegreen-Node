@@ -40,7 +40,6 @@ ISR(TIMER0_COMPA_vect)
 	{
 		cnt = 0;
 		display_SyncTask();
-		power_SyncTask();
 	}
 	if(cnt2 > 1000)	//1000ms
 	{
@@ -51,6 +50,11 @@ ISR(TIMER0_COMPA_vect)
 	{
 		cnt3 = 0;
 		button_SyncTask();
+	}
+	if(cnt4 > 10)
+	{
+		cnt4 = 0;
+		power_SyncTask();
 	}
 	if(cnt5 > 5000)	//every 5s
 	{

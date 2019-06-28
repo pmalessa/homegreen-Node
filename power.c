@@ -13,10 +13,14 @@ uint8_t LoadCounter = 0;
 uint16_t adcReadChannel(uint8_t channel);
 uint16_t measureVoltage();
 
+uint16_t volBuffer[5];
+
 void power_init() {
-    ADCSRA = _BV(ADEN) | _BV(ADPS1) | _BV(ADPS0);	//DIV8
-    ADCSRB = 0;
-    measureVoltage();	//scrap measurement
+    ADCSRA = _BV(ADEN) | _BV(ADATE)| _BV(ADPS1) | _BV(ADPS0);	//Enable, Auto Trigger, DIV8
+    ADCSRB = 0;													//Free running mode
+	ADMUX = CHANNEL_1V1;										//measuring 1.1V Reference Voltage
+	ADMUX |= (1<<REFS0);										//using VCC Reference
+	ADCSRA |= _BV(ADSC);										//start conversion
     PWR_IN1_DDR |= _BV(PWR_IN1_PIN);
     PWR_IN2_DDR |= _BV(PWR_IN2_PIN);
     PWR_LOAD_DDR |= _BV(PWR_LOAD_PIN);
@@ -26,17 +30,13 @@ void power_init() {
     power_setInputPower(0);
 }
 
-uint16_t adcReadChannel(uint8_t channel) {
-    ADMUX = channel;
-    ADMUX |= (1<<REFS0);	//using VCC Reference
-    ADCSRA |= _BV(ADSC);	//start conversion
-    while(ADCSRA & (1 << ADSC));	//wait for ADC to complete
-    uint16_t ret = ADC;
-    return ret;
-}
-
 uint16_t measureVoltage(){
-	uint16_t val = adcReadChannel(CHANNEL_1V1);
+	uint32_t val = 0;
+	for(uint8_t i=0;i<5;i++)
+	{
+		val +=volBuffer[i];
+	}
+	val = val / 5;
 	uint32_t result = 1125300L / val; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
 	return result;
 }
@@ -54,13 +54,26 @@ uint8_t power_isPowerConnected()	//return if last measured CurVol lower than Thr
 	}
 }
 
+uint8_t power_isPowerLow()	//return if last measured CurVol lower than Threshold
+{
+	uint16_t curVol = measureVoltage();
+	if(curVol < LOWVOLTAGE)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
 void power_setInputPower(uint8_t state)
 {
 	if (state == 1)
 	{
 		PWR_IN1_PORT |= _BV(PWR_IN1_PIN); 		//turn on PB
 		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
-		LoadCounter = 5;
+		LoadCounter = 50;
 	}
 	else
 	{
@@ -69,8 +82,9 @@ void power_setInputPower(uint8_t state)
 	}
 }
 
-void power_SyncTask()	//every 100ms
+void power_SyncTask()	//every 10ms
 {
+	static uint8_t ptr = 0;
 	if(LoadCounter)
 	{
 		LoadCounter--;
@@ -80,4 +94,6 @@ void power_SyncTask()	//every 100ms
 	{
 		PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
 	}
+	volBuffer[ptr] = ADC;	//read ADC
+	ptr = (ptr+1) % 5;		//ringbuffer
 }
