@@ -17,6 +17,7 @@ void power_init();
 uint8_t power_isPowerConnected();
 uint8_t power_isPowerLow();
 void power_setInputPower(uint8_t state);
+uint8_t power_isAdcStable();
 
 void power_SyncTask();	//every 10ms
 

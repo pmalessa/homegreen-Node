@@ -98,6 +98,7 @@ void state_machine()
 			{
 				first = 0;
 				power_setInputPower(1);
+				while(!power_isAdcStable());			//wait till ADC is stable
 				_delay_ms(100);
 				if(power_isPowerConnected() == true)	//if PB connected
 				{
@@ -382,16 +383,12 @@ void state_machine()
 				display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
 				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
-			
-			
 			if(!power_isPowerConnected()) //if power lost
 			{
 				pump_disable();
 				switchTo(STATE_SLEEP);
 				break;
 			}
-			
-			
 			break;
 		case STATE_PB_EMPTY:
 			//play Buzzer alarm till PB available
