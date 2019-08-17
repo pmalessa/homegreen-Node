@@ -14,7 +14,7 @@ uint16_t adcReadChannel(uint8_t channel);
 uint16_t measureVoltage();
 
 uint16_t volBuffer[5];
-uint8_t adcStable = 0;
+volatile uint8_t adcStable = 0;
 
 void power_init() {
 	//enable ADC in PRR
@@ -52,7 +52,7 @@ uint16_t measureVoltage(){
 
 uint8_t power_isAdcStable()
 {
-	return (adcStable == 10)	//ADC is stable once 10 measurements are buffered
+	return (adcStable == 10);	//ADC is stable once 10 measurements are buffered
 }
 
 uint8_t power_isPowerConnected()	//return if last measured CurVol lower than Threshold

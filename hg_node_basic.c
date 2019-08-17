@@ -275,7 +275,7 @@ void state_machine()
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
 			{
 				wdt_interrupt = 0;
-				buzzer_playTone(TONE_HEARTBEAT);
+				//buzzer_playTone(TONE_HEARTBEAT); only for debug
 				if(data_getCountdown() == 0)		//if countdown reached
 				{
 					power_setInputPower(1);			//enable Powerbank
