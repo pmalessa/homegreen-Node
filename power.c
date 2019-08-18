@@ -23,12 +23,10 @@ void power_init() {
 	ADMUX = CHANNEL_1V1;										//measuring 1.1V Reference Voltage
 	ADMUX |= (1<<REFS0);										//using VCC Reference
 	ADCSRA |= _BV(ADSC);										//start conversion
-    PWR_IN1_DDR |= _BV(PWR_IN1_PIN);
-    PWR_IN2_DDR |= _BV(PWR_IN2_PIN);
+    PWR_IN_DDR |= _BV(PWR_IN_PIN);
     PWR_LOAD_DDR |= _BV(PWR_LOAD_PIN);
 
     PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
-	PWR_IN2_PORT &= ~(_BV(PWR_IN2_PIN));	//turn off PB2
 	
 	adcStable = 0;
 }
@@ -85,13 +83,13 @@ void power_setInputPower(uint8_t state)
 {
 	if (state == 1)
 	{
-		PWR_IN1_PORT |= _BV(PWR_IN1_PIN); 		//turn on PB
+		PWR_IN_PORT &= ~(_BV(PWR_IN_PIN)); 		//turn on PB
 		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
 		LoadCounter = 50;
 	}
 	else
 	{
-		PWR_IN1_PORT &= ~(_BV(PWR_IN1_PIN));	//turn off PB
+		PWR_IN_PORT |= (_BV(PWR_IN_PIN));	//turn off PB
 		LoadCounter = 0;
 	}
 }

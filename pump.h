@@ -12,13 +12,13 @@
 #define PUMP_PORT PORTA
 #define PUMP_PIN PA1
 
-#define PUMP_SIG_DDR DDRC
-#define PUMP_SIG_PORT PORTC
-#define PUMP_SIG_PIN PC7
+#define PUMP_SIG_DDR DDRA
+#define PUMP_SIG_PORT PORTA
+#define PUMP_SIG_PIN PA0
 
-#define PUMP_TEST_DDR DDRA
-#define PUMP_TEST_PORT PORTA
-#define PUMP_TEST_PIN PA0
+#define PUMP_TEST_DDR DDRC
+#define PUMP_TEST_PORT PORTC
+#define PUMP_TEST_PIN PC7
 
 void pump_init();
 
