@@ -14,6 +14,7 @@
 #define TONE_POW_DOWN 4
 #define TONE_HEARTBEAT 5
 #define TONE_CLICK 6
+#define TONE_ALARM 7
 
 void buzzer_init();
 uint8_t buzzer_isPlaying();

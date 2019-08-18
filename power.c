@@ -25,6 +25,7 @@ void power_init() {
 	ADCSRA |= _BV(ADSC);										//start conversion
     PWR_IN_DDR |= _BV(PWR_IN_PIN);
     PWR_LOAD_DDR |= _BV(PWR_LOAD_PIN);
+    PWR_5V_DDR &= ~(_BV(PWR_LOAD_PIN)); 	//digital input
 
     PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
 	
@@ -55,6 +56,16 @@ uint8_t power_isAdcStable()
 
 uint8_t power_isPowerConnected()	//return if last measured CurVol lower than Threshold
 {
+	/*
+	if(PWR_5V_PINREG & (1 << PWR_5V_PIN))
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+	*/
 	uint16_t curVol = measureVoltage();
 	if(curVol > POWER_THRESHOLD)
 	{

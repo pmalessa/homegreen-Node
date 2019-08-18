@@ -30,6 +30,11 @@
 #define PWR_LOAD_PORT PORTB
 #define PWR_LOAD_PIN PB2
 
+#define PWR_5V_DDR DDRC
+#define PWR_5V_PORT PORTC
+#define PWR_5V_PIN PC0
+#define PWR_5V_PINREG PINC
+
 #define SLEEP_INTERVAL_S 4	//4000ms = 4s
 #define DISPLAY_TIMEOUT_S 15 //30sec
 

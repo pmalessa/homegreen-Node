@@ -15,12 +15,11 @@ typedef enum{
 	STATE_CONFIG,
 	STATE_SLEEP,
 	STATE_PUMPING,
-	STATE_MAN_PUMPING,
-	STATE_PB_EMPTY,
-	STATE_BAT_LOW
+	STATE_MAN_PUMPING
 }state_t;
 state_t state = STATE_BOOT;
 uint8_t first = 1;
+uint8_t pb_alarm = 0;
 
 volatile uint8_t wdt_interrupt = 0;
 
@@ -91,6 +90,7 @@ void state_machine()
 	static digit_t curdigit = DIGIT_INTERVAL;
 	static uint32_t prev_countdown = 0;
 	static button_press press;
+	static uint16_t chargeCounter = 0;
 
 	switch (state) {
 		case STATE_BOOT:
@@ -104,13 +104,13 @@ void state_machine()
 				{
 					display_init();
 					display_boot();
-					buzzer_playTone(TONE_BOOT);
+					//buzzer_playTone(TONE_BOOT);
 					switchTo(STATE_DISPLAY);
 					break;
 				}
 				else									//if on BatPower
 				{
-					buzzer_playTone(TONE_BOOT2);
+					//buzzer_playTone(TONE_BOOT2);
 					switchTo(STATE_SLEEP);
 					break;
 				}
@@ -272,6 +272,10 @@ void state_machine()
 			sleep_disable();						//disable sleep
 		    sei();									//enable interrupts
 
+		    if(pb_alarm == 1)
+		    {
+		    	buzzer_playTone(TONE_ALARM);
+		    }
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
 			{
 				wdt_interrupt = 0;
@@ -279,18 +283,32 @@ void state_machine()
 				if(data_getCountdown() == 0)		//if countdown reached
 				{
 					power_setInputPower(1);			//enable Powerbank
-					_delay_ms(200);					//wait for Powerbank to turn on
+					_delay_ms(500);					//wait for Powerbank to turn on
 					if(power_isPowerConnected())	//check if Powerbank connected
 					{
+						pb_alarm = 0;
 						display_init();
 						buzzer_playTone(TONE_POW_UP);
 						switchTo(STATE_DISPLAY);
 						break;
 					}
-					else							//if not, switch to Powerbank Empty Error State
+				}
+				if(chargeCounter > 0)
+				{
+					chargeCounter--;
+					buzzer_playTone(TONE_BOOT);
+				}
+				else
+				{
+					power_setInputPower(0);
+				}
+				if(power_isPowerLow())
+				{
+					power_setInputPower(1);
+					_delay_ms(500);			//wait for Powerbank to turn on
+					if(power_isPowerConnected())
 					{
-						switchTo(STATE_PB_EMPTY);
-						break;
+						chargeCounter = 7; //4 seconds*7 = 28 seconds
 					}
 				}
 			}
@@ -300,6 +318,7 @@ void state_machine()
 				_delay_ms(500);						//wait for Powerbank to turn on
 				if(power_isPowerConnected())		//check if Powerbank connected
 				{
+					pb_alarm = 0;
 					display_init();
 					buzzer_playTone(TONE_POW_UP);
 					switchTo(STATE_DISPLAY);		//switch to Display State
@@ -386,18 +405,10 @@ void state_machine()
 			if(!power_isPowerConnected()) //if power lost
 			{
 				pump_disable();
+				pb_alarm = 1;
 				switchTo(STATE_SLEEP);
 				break;
 			}
-			break;
-		case STATE_PB_EMPTY:
-			//play Buzzer alarm till PB available
-			//not yet implemented...
-			display_init();
-			switchTo(STATE_DISPLAY);		//switch to Display State
-			break;
-		case STATE_BAT_LOW:
-			//play Buzzer alarm till new bat
 			break;
 	}
 }
