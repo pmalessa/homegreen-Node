@@ -20,7 +20,7 @@ uint8_t tail = 0;
 
 void set_freq(uint16_t hz);
 
-uint16_t freqTable[31] ={
+uint16_t freqTable[41] ={
 	0,		//not used
 	624,	//100Hz
 	311,	//200Hz
@@ -51,14 +51,24 @@ uint16_t freqTable[31] ={
 	23,		//2700Hz
 	22,		//2800Hz
 	21,		//2900Hz
-	20		//3000Hz
+	20,		//3000Hz
+	19,		//3100
+	18,		//3200
+	17,		//3300
+	16,		//3400
+	15,		//3500
+	14,		//3600
+	13,		//3700
+	12,		//3800
+	11,		//3900
+	10		//4000
 };
 
 //freq_hz, length_ms
 tone_t boot_pb[4] ={
-	{20, 500},
-	{25, 500},
-	{30, 500},
+	{20, 200},
+	{25, 200},
+	{30, 200},
 	{0,0}};
 tone_t boot_bat[4] ={
 	{20, 200},
@@ -78,6 +88,12 @@ tone_t powUp[3] ={
 tone_t powDown[3] ={
 	{30, 100},
 	{20, 100},
+	{0,0}};
+tone_t tone_alarm[5] ={
+	{0,10},
+	{35, 20},
+	{0,15},
+	{35, 20},
 	{0,0}};
 
 void buzzer_init()
@@ -111,6 +127,9 @@ void buzzer_playTone(uint8_t tone_id)
 		case TONE_CLICK:
 			buffer[head] = click;
 			break;
+		case TONE_ALARM:
+			buffer[head] = tone_alarm;
+			break;
 		default:
 			return;
 			break;
@@ -133,7 +152,7 @@ void set_freq(uint16_t hz)
 	{
 		TCCR1A &= ~(1<<COM1A0);	//disable output
 	}
-	else if(hz <=30)
+	else if(hz <=40)
 	{
 		TCCR1A |= (1<<COM1A0);	//enable output
 		OCR1A = freqTable[hz];	//62500/hz -1

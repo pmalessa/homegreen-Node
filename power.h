@@ -11,7 +11,7 @@
 #define CHANNEL_1V1	0b1110
 
 #define LOWVOLTAGE 2500	//Low Voltage Threshold in mV
-#define POWER_THRESHOLD 3000
+#define POWER_THRESHOLD 3700
 
 void power_init();
 uint8_t power_isPowerConnected();
