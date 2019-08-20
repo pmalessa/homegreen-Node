@@ -7,7 +7,6 @@
 #include "data.h"
 #include "temp.h"
 #include "button.h"
-#include "buzzer.h"
 
 typedef enum{
 	STATE_BOOT,
@@ -19,13 +18,12 @@ typedef enum{
 }state_t;
 state_t state = STATE_BOOT;
 uint8_t first = 1;
-uint8_t pb_alarm = 0;
 
 volatile uint8_t wdt_interrupt = 0;
 
 ISR(WDT_vect) {
 	wdt_interrupt = 1;
-	data_decCountdown(4);
+	data_decCountdown(8);
 }
 
 void switchTo(state_t newstate)
@@ -51,7 +49,10 @@ int main (void) {
 	MCUSR = 0;
 	MCUSR &= ~(1<<WDRF);								//unlock step 1
 	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
-	WDTCSR = (1 << WDIE) | (1 << WDP3); 				//Set to Interrupt Mode and "every 4 s"
+	WDTCSR = (1 << WDIE) | (1 << WDP3) | (1 << WDP0); 	//Set to Interrupt Mode and "every 8 s"
+
+	//power saving
+//	PRR |= (1 << PRTWI) | (1 << PRTIM1);
 
 	timer_init();
 	button_init();
@@ -60,7 +61,6 @@ int main (void) {
 	power_init();
 	data_init();
 //	temp_init();
-	buzzer_init();
 
 	sei();
 
@@ -104,13 +104,11 @@ void state_machine()
 				{
 					display_init();
 					display_boot();
-					//buzzer_playTone(TONE_BOOT);
 					switchTo(STATE_DISPLAY);
 					break;
 				}
 				else									//if on BatPower
 				{
-					//buzzer_playTone(TONE_BOOT2);
 					switchTo(STATE_SLEEP);
 					break;
 				}
@@ -151,7 +149,6 @@ void state_machine()
 			}
 			if((button_isPressed(BUTTON_MAN) == BUTTON_LONG_PRESSING))	//switch to MAN_PUMPING
 			{
-				buzzer_playTone(TONE_CLICK);//buzzer sound
 				display_clear();
 				display_setByte(4,0x3F);	//O
 				display_setByte(5,0x54);	//N
@@ -162,7 +159,6 @@ void state_machine()
 			}
 			if((button_isPressed(BUTTON_SET) == BUTTON_LONG_PRESSING))
 			{
-				buzzer_playTone(TONE_CLICK);//buzzer sound
 				fade();
 				switchTo(STATE_CONFIG);										//switch to CONFIG
 				break;
@@ -196,7 +192,6 @@ void state_machine()
 					data_increment(curdigit);
 					display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));	//todo: only curdigit
 					display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
-					buzzer_playTone(TONE_CLICK);//buzzer sound
 					_delay_ms(100);
 				}
 			}
@@ -205,7 +200,6 @@ void state_machine()
 				data_increment(curdigit);
 				display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));		//todo: only curdigit
 				display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
-				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
 			press = button_isPressed(BUTTON_MINUS);
 			if(press == BUTTON_LONG_PRESSING)								//if long Press
@@ -215,7 +209,6 @@ void state_machine()
 					data_decrement(curdigit);
 					display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));	//todo: only curdigit
 					display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
-					buzzer_playTone(TONE_CLICK);//buzzer sound
 					_delay_ms(100);
 				}
 			}
@@ -224,7 +217,6 @@ void state_machine()
 				data_decrement(curdigit);
 				display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));	//todo: only curdigit
 				display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
-				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
 			press = button_isPressed(BUTTON_SET);							//get Set Button Press
 			if(press == BUTTON_LONG_PRESSING || display_gettimeout() == 0)	//Long Press or IDLE timeout, Config done
@@ -234,12 +226,10 @@ void state_machine()
 				fade();
 				data_resetCountdown();										//reset Countdown
 				switchTo(STATE_DISPLAY);									//switch to State Display
-				buzzer_playTone(TONE_CLICK);//buzzer sound
 				break;
 			}
 			else if(press == BUTTON_SHORT_PRESS)							//Short SET Press, switch selected Digit
 			{
-				buzzer_playTone(TONE_CLICK);//buzzer sound
 				if(curdigit == DIGIT_DURATION)
 				{
 					curdigit = DIGIT_INTERVAL;
@@ -257,38 +247,31 @@ void state_machine()
 			{
 				first = 0;
 				display_deInit();
-				buzzer_playTone(TONE_POW_DOWN);
 				power_setInputPower(0);				//disable Powerbank
 			}
-			while(buzzer_isPlaying());				//wait while buzzer active
+			//PRR |= (1 << PRADC);
 		    set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//Sleep mode: only wdt and pin interrupt
 		    cli();									//disable interrupts
 			sleep_enable();							//enable sleep
-			//sleep_bod_disable();					//disable BOD for power save
+//			sleep_bod_disable();					//disable BOD for power save
 			sei();									//enable interrupts
 			sleep_cpu();							//sleep...
 			/*zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz*/
 			//waked up
 			sleep_disable();						//disable sleep
-		    sei();									//enable interrupts
+			//PRR &= ~(1 << PRADC);
+			sei();									//enable interrupts
 
-		    if(pb_alarm == 1)
-		    {
-		    	buzzer_playTone(TONE_ALARM);
-		    }
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
 			{
 				wdt_interrupt = 0;
-				//buzzer_playTone(TONE_HEARTBEAT); only for debug
 				if(data_getCountdown() == 0)		//if countdown reached
 				{
 					power_setInputPower(1);			//enable Powerbank
-					_delay_ms(500);					//wait for Powerbank to turn on
+					_delay_ms(500);
 					if(power_isPowerConnected())	//check if Powerbank connected
 					{
-						pb_alarm = 0;
 						display_init();
-						buzzer_playTone(TONE_POW_UP);
 						switchTo(STATE_DISPLAY);
 						break;
 					}
@@ -296,7 +279,6 @@ void state_machine()
 				if(chargeCounter > 0)
 				{
 					chargeCounter--;
-					buzzer_playTone(TONE_BOOT);
 				}
 				else
 				{
@@ -318,16 +300,13 @@ void state_machine()
 				_delay_ms(500);						//wait for Powerbank to turn on
 				if(power_isPowerConnected())		//check if Powerbank connected
 				{
-					pb_alarm = 0;
 					display_init();
-					buzzer_playTone(TONE_POW_UP);
 					switchTo(STATE_DISPLAY);		//switch to Display State
 					break;
 				}
 				else								//if not, stay in sleep
 				{
 					power_setInputPower(0);				//disable Powerbank
-					buzzer_playTone(TONE_BOOT2);
 					//stay in sleep
 				}
 			}
@@ -337,6 +316,7 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
+				_delay_ms(2000);							//wait for Cap to charge a bit
 				pump_enable(data_get(DATA_PUMP_DURATION));	//enable Pump for specified duration
 			}
 			if(pump_getCountdown() == 0)					//if pump duration reached, switch to Display State
@@ -352,7 +332,6 @@ void state_machine()
 			press = button_isPressed(BUTTON_MAN);
 			if(press == BUTTON_LONG_PRESSING)				//if Button MAN long pressed, disable Pump
 			{
-				buzzer_playTone(TONE_CLICK);//buzzer sound
 				display_clear();
 				display_setByte(3,0x3F);	//O
 				display_setByte(4,0x71);	//F
@@ -371,7 +350,6 @@ void state_machine()
 					data_increment(DATA_PUMP_DURATION);
 					pump_enable(data_get(DATA_PUMP_DURATION));
 					display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
-					buzzer_playTone(TONE_CLICK);//buzzer sound
 					_delay_ms(100);
 				}
 			}
@@ -380,7 +358,6 @@ void state_machine()
 				data_increment(DATA_PUMP_DURATION);
 				pump_enable(data_get(DATA_PUMP_DURATION));
 				display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
-				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
 
 			press = button_isPressed(BUTTON_MINUS);
@@ -391,7 +368,6 @@ void state_machine()
 					data_decrement(DATA_PUMP_DURATION);
 					pump_enable(data_get(DATA_PUMP_DURATION));
 					display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
-					buzzer_playTone(TONE_CLICK);//buzzer sound
 					_delay_ms(100);
 				}
 			}
@@ -400,12 +376,10 @@ void state_machine()
 				data_decrement(DATA_PUMP_DURATION);
 				pump_enable(data_get(DATA_PUMP_DURATION));
 				display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
-				buzzer_playTone(TONE_CLICK);//buzzer sound
 			}
 			if(!power_isPowerConnected()) //if power lost
 			{
 				pump_disable();
-				pb_alarm = 1;
 				switchTo(STATE_SLEEP);
 				break;
 			}

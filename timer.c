@@ -12,7 +12,6 @@
 #include "display.h"
 #include "button.h"
 #include "power.h"
-#include "buzzer.h"
 #include "temp.h"
 
 void timer_init()
@@ -34,7 +33,6 @@ ISR(TIMER0_COMPA_vect)
 	cnt3++;
 	cnt4++;
 	cnt5++;
-	buzzer_SyncTask();
 
 	if(cnt > 100)	//100ms
 	{
