@@ -8,9 +8,7 @@
 #include "PLATFORM.h"
 #include "power.h"
 
-uint8_t LoadCounter = 0;
-
-uint16_t adcReadChannel(uint8_t channel);
+uint16_t LoadCounter = 0;
 uint16_t measureVoltage();
 
 uint16_t volBuffer[5];
@@ -56,16 +54,6 @@ uint8_t power_isAdcStable()
 
 uint8_t power_isPowerConnected()	//return if last measured CurVol lower than Threshold
 {
-	/*
-	if(PWR_5V_PINREG & (1 << PWR_5V_PIN))
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
-	*/
 	uint16_t curVol = measureVoltage();
 	if(curVol > POWER_THRESHOLD)
 	{
@@ -95,13 +83,22 @@ void power_setInputPower(uint8_t state)
 	if (state == 1)
 	{
 		PWR_IN_PORT &= ~(_BV(PWR_IN_PIN)); 		//turn on PB
-		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
-		LoadCounter = 50;
 	}
 	else
 	{
 		PWR_IN_PORT |= (_BV(PWR_IN_PIN));	//turn off PB
-		LoadCounter = 0;
+	}
+}
+
+void power_setLoad(uint8_t state)
+{
+	if(state == 1)
+	{
+		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
+	}
+	else
+	{
+		PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
 	}
 }
 
@@ -111,15 +108,6 @@ void power_SyncTask()	//every 10ms
 	if(adcStable < 10)	//count adcStable till 10
 	{
 		adcStable++;
-	}
-	if(LoadCounter)
-	{
-		LoadCounter--;
-		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
-	}
-	else
-	{
-		PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
 	}
 	volBuffer[ptr] = ADC;	//read ADC
 	ptr = (ptr+1) % 5;		//ringbuffer
