@@ -63,6 +63,10 @@ int main (void) {
 	data_init();
 //	temp_init();
 
+	//init debug pin
+	BUZZER_DDR |= (1 << BUZZER_PIN);
+	BUZZER_PORT |= (1 << BUZZER_PIN);
+
 	sei();
 
 	while(1)
@@ -250,6 +254,7 @@ void state_machine()
 				display_deInit();
 				power_setInputPower(0);				//disable Powerbank
 			}
+			BUZZER_PORT &= ~(1 << BUZZER_PIN);
 			//PRR |= (1 << PRADC);
 		    set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//Sleep mode: only wdt and pin interrupt
 		    cli();									//disable interrupts
@@ -261,6 +266,7 @@ void state_machine()
 			//waked up
 			sleep_disable();						//disable sleep
 			//PRR &= ~(1 << PRADC);
+			BUZZER_PORT |= (1 << BUZZER_PIN);
 			sei();									//enable interrupts
 
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
@@ -315,7 +321,7 @@ void state_machine()
 				}
 				else
 				{
-					switchTo(STATE_SLEEP);	//unsuccessful, back to sleep
+					switchTo(STATE_SLEEP);	//unsuccessful, back to sleep, try 1min later?
 				}
 			}
 			break;
