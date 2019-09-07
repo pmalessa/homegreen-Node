@@ -8,7 +8,7 @@
 #include "PLATFORM.h"
 #include "power.h"
 
-uint8_t LoadCounter = 0;
+uint16_t LoadCounter = 0;
 uint16_t measureVoltage();
 
 uint16_t volBuffer[5];
@@ -83,13 +83,22 @@ void power_setInputPower(uint8_t state)
 	if (state == 1)
 	{
 		PWR_IN_PORT &= ~(_BV(PWR_IN_PIN)); 		//turn on PB
-		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
-		LoadCounter = 200;
 	}
 	else
 	{
 		PWR_IN_PORT |= (_BV(PWR_IN_PIN));	//turn off PB
-		LoadCounter = 0;
+	}
+}
+
+void power_setLoad(uint8_t state)
+{
+	if(state == 1)
+	{
+		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
+	}
+	else
+	{
+		PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
 	}
 }
 
@@ -99,15 +108,6 @@ void power_SyncTask()	//every 10ms
 	if(adcStable < 10)	//count adcStable till 10
 	{
 		adcStable++;
-	}
-	if(LoadCounter)
-	{
-		LoadCounter--;
-		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
-	}
-	else
-	{
-		PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
 	}
 	volBuffer[ptr] = ADC;	//read ADC
 	ptr = (ptr+1) % 5;		//ringbuffer

@@ -13,12 +13,13 @@ typedef enum{
 	STATE_DISPLAY,
 	STATE_CONFIG,
 	STATE_SLEEP,
+	STATE_WAKEUP,
 	STATE_PUMPING,
 	STATE_MAN_PUMPING
 }state_t;
 state_t state = STATE_BOOT;
 uint8_t first = 1;
-
+uint8_t wakeupTimeout = 0;
 volatile uint8_t wdt_interrupt = 0;
 
 ISR(WDT_vect) {
@@ -133,19 +134,19 @@ void state_machine()
 			{
 				prev_countdown = data_getCountdown();
 				display_setValue(DIGIT_COUNTDOWN,data_getCountdownDisplay());
-				if(data_getCountdown() == 0)			//if countdown reached, switch to PUMPING
-				{
-					fade();
-					data_resetCountdown();									//reset Countdown
-					data_set(DATA_PUMP_DURATION,data_get(DATA_DURATION));	//set Pump Duration to configured duration
-					switchTo(STATE_PUMPING);
-					break;
-				}
-				if(!power_isPowerConnected()) //if power lost
-				{
-					switchTo(STATE_SLEEP);
-					break;
-				}
+			}
+			if(data_getCountdown() == 0)			//if countdown reached, switch to PUMPING
+			{
+				fade();
+				data_resetCountdown();									//reset Countdown
+				data_set(DATA_PUMP_DURATION,data_get(DATA_DURATION));	//set Pump Duration to configured duration
+				switchTo(STATE_PUMPING);
+				break;
+			}
+			if(!power_isPowerConnected()) //if power lost
+			{
+				switchTo(STATE_SLEEP);
+				break;
 			}
 			if((button_isPressed(BUTTON_MAN) == BUTTON_LONG_PRESSING))	//switch to MAN_PUMPING
 			{
@@ -267,14 +268,7 @@ void state_machine()
 				wdt_interrupt = 0;
 				if(data_getCountdown() == 0)		//if countdown reached
 				{
-					power_setInputPower(1);			//enable Powerbank
-					_delay_ms(500);
-					if(power_isPowerConnected())	//check if Powerbank connected
-					{
-						display_init();
-						switchTo(STATE_DISPLAY);
-						break;
-					}
+					switchTo(STATE_WAKEUP);
 				}
 				if(chargeCounter > 0)
 				{
@@ -288,26 +282,40 @@ void state_machine()
 				{
 					power_setInputPower(1);
 					_delay_ms(500);			//wait for Powerbank to turn on
-					if(power_isPowerConnected())
-					{
-						chargeCounter = 7; //4 seconds*7 = 28 seconds
-					}
+					chargeCounter = 7; //4 seconds*7 = 28 seconds
 				}
 			}
 			else if(button_anyPressed())			//button interrupt wakeup
 			{
-				power_setInputPower(1);				//enable Powerbank
-				_delay_ms(500);						//wait for Powerbank to turn on
-				if(power_isPowerConnected())		//check if Powerbank connected
+				switchTo(STATE_WAKEUP);
+			}
+			break;
+		case STATE_WAKEUP:
+			if(first)
+			{
+				first = 0;
+				power_setInputPower(1);
+				wakeupTimeout = 5;	//try for 5 seconds
+			}
+			if(power_isPowerConnected())
+			{
+				//successfully woken up
+				display_init();
+				switchTo(STATE_DISPLAY);		//switch to Display State
+			}
+			else
+			{
+				if(wakeupTimeout)
 				{
-					display_init();
-					switchTo(STATE_DISPLAY);		//switch to Display State
-					break;
+					wakeupTimeout--;
+					power_setLoad(1);
+					_delay_ms(500);
+					power_setLoad(0);
+					_delay_ms(500);
 				}
-				else								//if not, stay in sleep
+				else
 				{
-					power_setInputPower(0);				//disable Powerbank
-					//stay in sleep
+					switchTo(STATE_SLEEP);	//unsuccessful, back to sleep
 				}
 			}
 			break;
@@ -316,7 +324,7 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				_delay_ms(2000);							//wait for Cap to charge a bit
+				_delay_ms(500);							//wait for Cap to charge a bit
 				pump_enable(data_get(DATA_PUMP_DURATION));	//enable Pump for specified duration
 			}
 			if(pump_getCountdown() == 0)					//if pump duration reached, switch to Display State
