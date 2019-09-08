@@ -8,7 +8,7 @@
 
 #include "button.h"
 
-button_struct button[4];
+button_struct button[5];
 volatile uint8_t button_any_pressed;
 
 void button_dummy_callback()

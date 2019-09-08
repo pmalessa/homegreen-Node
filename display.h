@@ -10,7 +10,8 @@
 
 void display_init();
 void display_deInit();
-void display_boot();
+bool display_boot();
+bool display_wakeAnimation();
 void display_clear();
 void display_declear();
 void display_SyncTask(); //1ms
@@ -24,4 +25,5 @@ void display_pumpanimation();
 void display_resettimeout();
 uint8_t display_gettimeout();
 void display_setByte(uint8_t pos, uint8_t byte);
+void display_update();
 #endif /* DISPLAY_H_ */

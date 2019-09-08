@@ -13,6 +13,7 @@ uint16_t measureVoltage();
 
 uint16_t volBuffer[5];
 volatile uint8_t adcStable = 0;
+uint8_t gracePeriod = 0;
 
 void power_init() {
 	//enable ADC in PRR
@@ -28,6 +29,7 @@ void power_init() {
     PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
 	
 	adcStable = 0;
+	gracePeriod = 0;
 }
 
 void power_deInit()
@@ -55,7 +57,28 @@ uint8_t power_isAdcStable()
 uint8_t power_isPowerConnected()	//return if last measured CurVol lower than Threshold
 {
 	uint16_t curVol = measureVoltage();
-	if(curVol > POWER_THRESHOLD)
+	if(gracePeriod > 0)
+	{
+		return true;
+	}
+	if(curVol > POWER_HIGH_THRESHOLD)	//higher bound
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+uint8_t power_isPowerLost()	//return if last measured CurVol lower than Threshold
+{
+	uint16_t curVol = measureVoltage();
+	if(gracePeriod > 0)
+	{
+		return false;
+	}
+	if(curVol < POWER_LOW_THRESHOLD)	//lower bound
 	{
 		return 1;
 	}
@@ -68,6 +91,10 @@ uint8_t power_isPowerConnected()	//return if last measured CurVol lower than Thr
 uint8_t power_isPowerLow()	//return if last measured CurVol lower than Threshold
 {
 	uint16_t curVol = measureVoltage();
+	if(gracePeriod > 0)
+	{
+		return false;
+	}
 	if(curVol < LOWVOLTAGE)
 	{
 		return 1;
@@ -76,6 +103,11 @@ uint8_t power_isPowerLow()	//return if last measured CurVol lower than Threshold
 	{
 		return 0;
 	}
+}
+
+void power_SetGracePeriod()
+{
+	gracePeriod = 2; //2 seconds
 }
 
 void power_setInputPower(uint8_t state)
@@ -104,11 +136,20 @@ void power_setLoad(uint8_t state)
 
 void power_SyncTask()	//every 10ms
 {
-	static uint8_t ptr = 0;
+	static uint8_t ptr = 0, cnt=0;
 	if(adcStable < 10)	//count adcStable till 10
 	{
 		adcStable++;
 	}
 	volBuffer[ptr] = ADC;	//read ADC
 	ptr = (ptr+1) % 5;		//ringbuffer
+	cnt++;
+	if(cnt > 100)
+	{
+		cnt=0;
+		if(gracePeriod > 0)
+		{
+			gracePeriod--;
+		}
+	}
 }

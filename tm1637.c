@@ -52,9 +52,6 @@
 
 #define DELAY_US                50
 
-#define TM_DOT          0x80
-
-volatile uint8_t dotmask = 0;
 
 //      Bits:                 Hex:
 //        -- 0 --               -- 01 --
@@ -66,21 +63,6 @@ volatile uint8_t dotmask = 0;
 //       4       2            10        04
 //       |       |             |        |
 //        -- 3 --  .7           -- 08 --   .80
-
-
-PROGMEM const uint8_t TM_DIGITS[] =
-{
-    0x3F, // 0
-    0x06, // 1
-    0x5B, // 2
-    0x4F, // 3
-    0x66, // 4
-    0x6D, // 5
-    0x7D, // 6
-    0x07, // 7
-    0x7F, // 8
-    0x6F, // 9
-};
 
 void start()
 {
@@ -155,35 +137,17 @@ void tm1637_Init()
 
     send_cmd(TM_DATA_CMD | TM_WRITE_DISP);
     send_cmd(TM_DISP_CTRL | TM_DISP_ENABLE | TM_DISP_PWM_MASK);
-
-    tm1637_Clear();
 }
 
 void tm1637_deInit()
 {
-	TM_CLK_LOW();
-	TM_DAT_LOW();
-}
-
-void tm1637_Clear()
-{
-    for (uint8_t a = 0; a != TM1637_DIGITS; ++a)
-        send_data(a, 0x00);
+//	TM_CLK_LOW();
+//	TM_DAT_LOW();
 }
 
 void tm1637_setByte(uint8_t position, uint8_t b)
 {
-    send_data(position, b | (dotmask & (1 << position) ? TM_DOT : 0));
-}
-
-void tm1637_setDigit(uint8_t position, uint8_t digit)
-{
-	tm1637_setByte(position, pgm_read_byte(&TM_DIGITS[digit & 0xF]));
-}
-
-void tm1637_setDots(uint8_t mask)
-{
-    dotmask = mask;
+    send_data(position, b);
 }
 
 void tm1637_setBrightness(uint8_t brightness)

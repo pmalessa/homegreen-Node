@@ -72,6 +72,7 @@ int main (void) {
 	while(1)
 	{
 		state_machine();
+		display_update();
 	}
 }
 
@@ -79,11 +80,13 @@ void fade()
 {
 	while(!display_fadeDown(0))
 	{
+		display_update();
 		_delay_ms(40);
 	}
 	_delay_ms(400);
 	while(!display_fadeUp(7))
 	{
+		display_update();
 		_delay_ms(40);
 	}
 	_delay_ms(400);
@@ -108,7 +111,11 @@ void state_machine()
 				if(power_isPowerConnected() == true)	//if PB connected
 				{
 					display_init();
-					display_boot();
+					while(display_boot() != 1)
+					{
+						display_update();
+						_delay_ms(100);
+					}
 					switchTo(STATE_DISPLAY);
 					break;
 				}
@@ -147,11 +154,12 @@ void state_machine()
 				switchTo(STATE_PUMPING);
 				break;
 			}
-			if(!power_isPowerConnected()) //if power lost
+			if(power_isPowerLost()) //if power lost
 			{
 				switchTo(STATE_SLEEP);
 				break;
 			}
+
 			if((button_isPressed(BUTTON_MAN) == BUTTON_LONG_PRESSING))	//switch to MAN_PUMPING
 			{
 				display_clear();
@@ -162,6 +170,7 @@ void state_machine()
 				switchTo(STATE_MAN_PUMPING);								//switch to MAN_PUMPING
 				break;
 			}
+
 			if((button_isPressed(BUTTON_SET) == BUTTON_LONG_PRESSING))
 			{
 				fade();
@@ -173,17 +182,20 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));
-				display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
-				display_setValue(DIGIT_COUNTDOWN,data_getCountdownDisplay());
-				display_setblinking(DIGIT_INTERVAL);
+				display_resettimeout();
 				curdigit = DIGIT_INTERVAL;
+				display_setblinking(curdigit);
+
 			}
+			display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));
+			display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
+			display_setValue(DIGIT_COUNTDOWN,data_getCountdownDisplay());
+
 			if(data_getCountdown() != prev_countdown)						//update Countdown
 			{
 				prev_countdown = data_getCountdown();
 				display_setValue(DIGIT_COUNTDOWN,data_getCountdownDisplay());
-				if(!power_isPowerConnected()) //if power lost
+				if(power_isPowerLost()) //if power lost
 				{
 					switchTo(STATE_SLEEP);
 					break;
@@ -192,36 +204,38 @@ void state_machine()
 			press = button_isPressed(BUTTON_PLUS);							//get Button Plus Press
 			if(press == BUTTON_LONG_PRESSING)								//if long Press
 			{
+				display_clearBlinking();
 				while(button_isPressed(BUTTON_PLUS))						//while pressed, fast increment
 				{
 					data_increment(curdigit);
-					display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));	//todo: only curdigit
-					display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
+					display_setValue(curdigit,data_get(curdigit));
+					display_update();
 					_delay_ms(100);
 				}
+				display_setblinking(curdigit);
 			}
 			else if(press == BUTTON_SHORT_PRESS)							//if short press, increment one step
 			{
 				data_increment(curdigit);
-				display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));		//todo: only curdigit
-				display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
+				display_setValue(curdigit,data_get(curdigit));
 			}
 			press = button_isPressed(BUTTON_MINUS);
 			if(press == BUTTON_LONG_PRESSING)								//if long Press
 			{
+				display_clearBlinking();
 				while(button_isPressed(BUTTON_MINUS))						//while pressed, fast decrement
 				{
 					data_decrement(curdigit);
-					display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));	//todo: only curdigit
-					display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
+					display_setValue(curdigit,data_get(curdigit));
+					display_update();
 					_delay_ms(100);
 				}
+				display_setblinking(curdigit);
 			}
 			else if(press == BUTTON_SHORT_PRESS)							//if short press, decrement one step
 			{
 				data_decrement(curdigit);
-				display_setValue(DIGIT_DURATION,data_get(DATA_DURATION));	//todo: only curdigit
-				display_setValue(DIGIT_INTERVAL,data_get(DATA_INTERVAL));
+				display_setValue(curdigit,data_get(curdigit));
 			}
 			press = button_isPressed(BUTTON_SET);							//get Set Button Press
 			if(press == BUTTON_LONG_PRESSING || display_gettimeout() == 0)	//Long Press or IDLE timeout, Config done
@@ -266,7 +280,7 @@ void state_machine()
 			//waked up
 			sleep_disable();						//disable sleep
 			//PRR &= ~(1 << PRADC);
-			BUZZER_PORT |= (1 << BUZZER_PIN);
+
 			sei();									//enable interrupts
 
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
@@ -305,8 +319,19 @@ void state_machine()
 			}
 			if(power_isPowerConnected())
 			{
+				power_setLoad(1);
+				_delay_ms(150);
+				power_setLoad(0);
+				_delay_ms(150);
+				power_SetGracePeriod();	//ignore power lost for 2 seconds
+				BUZZER_PORT |= (1 << BUZZER_PIN);
 				//successfully woken up
 				display_init();
+				while(display_wakeAnimation() != true)
+				{
+					display_update();
+					_delay_ms(30);
+				}
 				switchTo(STATE_DISPLAY);		//switch to Display State
 			}
 			else
@@ -350,6 +375,7 @@ void state_machine()
 				display_setByte(3,0x3F);	//O
 				display_setByte(4,0x71);	//F
 				display_setByte(5,0x71);	//F
+				display_update();
                 pump_disable();
 				_delay_ms(1500);
 				switchTo(STATE_DISPLAY);					//switch to Display State
@@ -364,6 +390,7 @@ void state_machine()
 					data_increment(DATA_PUMP_DURATION);
 					pump_enable(data_get(DATA_PUMP_DURATION));
 					display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
+					display_update();
 					_delay_ms(100);
 				}
 			}
@@ -382,6 +409,7 @@ void state_machine()
 					data_decrement(DATA_PUMP_DURATION);
 					pump_enable(data_get(DATA_PUMP_DURATION));
 					display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
+					display_update();
 					_delay_ms(100);
 				}
 			}
