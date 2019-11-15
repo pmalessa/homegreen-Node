@@ -40,8 +40,8 @@
 #define TM_OUT          PORTD
 #define TM_IN           PIND
 #define TM_DDR          DDRD
-#define TM_BIT_CLK      _BV(PD5)
-#define TM_BIT_DAT      _BV(PD6)
+#define TM_BIT_CLK      _BV(PD6)
+#define TM_BIT_DAT      _BV(PD5)
 
 // ----------------------------------------------------------------------------
 // Functions and parameters
@@ -58,39 +58,7 @@
 #define TM1637_DIGITS   6
 
 void tm1637_Init();
-void tm1637_Clear();	// Clear the 7-segment displays (only)
+void tm1637_deInit();
 void tm1637_setByte(uint8_t position, uint8_t b); // Set a single 7-segment display to the given byte value.
-void setDigit(uint8_t position, uint8_t digit); // Display a single digit at the given position.
-
-// Display an unsigned number at a given offset and alignment.
-void tm1637_setNumber(uint32_t number, uint8_t offset, uint8_t align);
-
-// Display an unsigned number at a given offset and pad it with 0's or
-// spaces to a desired with. This function is helpful when the numbers can
-// fluctuate in length (ex. 100, 5, 1000) to avoid flickering segments.
-void tm1637_setNumberPad(uint32_t number, uint8_t offset, uint8_t width, uint8_t pad);
-
-// Display an unsigned number in hex format at a given offset and pad it
-// with 0's or spaces to a desired with.
-void tm1637_setNumberHex(uint32_t number, uint8_t offset, uint8_t width, uint8_t pad);
-
-// Draw a character at a given position.
-// Not all characters are supported, check TM1637Font.h for an overview.
-void tm1637_setChar(uint8_t position, char ch);
-
-// Display a string starting at a given offset.
-void tm1637_setChars(char* value, uint8_t offset);
-
-// Scroll characters (scrolls <--- left)
-void tm1637_scrollChars(char* value);
-
-// Set which "dots" should be enabled.
-// Mask is mapped right to left (ex. 0x01 = right-most dot)
-void tm1637_setDots(uint8_t mask);
-
-// Set the brightness between 0 and 7
 void tm1637_setBrightness(uint8_t brightness);
-
-uint8_t tm1637_NrToByte(uint8_t nr);
-void tm1637_setDigit(uint8_t position, uint8_t digit);
 #endif

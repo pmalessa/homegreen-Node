@@ -8,54 +8,60 @@
 #include "PLATFORM.h"
 #include "power.h"
 
-uint16_t volatile curVol = 3000;
-uint8_t volatile curPowerState = 0;
-void power_dummy_callback()
-{
-}
-void (*power_callback)(void) = &power_dummy_callback;
-
-uint16_t adcReadChannel(uint8_t channel);
+uint16_t LoadCounter = 0;
 uint16_t measureVoltage();
 
+uint16_t volBuffer[5];
+volatile uint8_t adcStable = 0;
+uint8_t gracePeriod = 0;
+
 void power_init() {
-    ADCSRA = _BV(ADEN) | _BV(ADPS1) | _BV(ADPS0);	//DIV8
-    ADCSRB = 0;
-    measureVoltage();	//scrap measurement
-    curPowerState = power_isPowerConnected();
-    PWR_IN1_DDR |= _BV(PWR_IN1_PIN);
-    PWR_IN2_DDR |= _BV(PWR_IN2_PIN);
+	//enable ADC in PRR
+    ADCSRA = _BV(ADEN) | _BV(ADATE)| _BV(ADPS1) | _BV(ADPS0);	//Enable, Auto Trigger, DIV8
+    ADCSRB = 0;													//Free running mode
+	ADMUX = CHANNEL_1V1;										//measuring 1.1V Reference Voltage
+	ADMUX |= (1<<REFS0);										//using VCC Reference
+	ADCSRA |= _BV(ADSC);										//start conversion
+    PWR_IN_DDR |= _BV(PWR_IN_PIN);
     PWR_LOAD_DDR |= _BV(PWR_LOAD_PIN);
+    PWR_5V_DDR &= ~(_BV(PWR_LOAD_PIN)); 	//digital input
 
     PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
-    power_setInputPower(0);
+	
+	adcStable = 0;
+	gracePeriod = 0;
 }
 
-void power_setCallback(void (*func)(void))	//set pin change callback function
+void power_deInit()
 {
-	power_callback = func;
-}
-
-uint16_t adcReadChannel(uint8_t channel) {
-    ADMUX = channel;
-    ADMUX |= (1<<REFS0);	//using VCC Reference
-    ADCSRA |= _BV(ADSC);	//start conversion
-    while(ADCSRA & (1 << ADSC));	//wait for ADC to complete
-    uint16_t ret = ADC;
-    return ret;
+	ADCSRA = 0;	//disable ADC
+	//disable ADC in PRR
 }
 
 uint16_t measureVoltage(){
-	uint16_t val = adcReadChannel(CHANNEL_1V1);
+	uint32_t val = 0;
+	for(uint8_t i=0;i<5;i++)
+	{
+		val +=volBuffer[i];
+	}
+	val = val / 5;
 	uint32_t result = 1125300L / val; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
 	return result;
 }
 
-//return if last measured CurVol lower than Threshold
-uint8_t power_isPowerConnected()
+uint8_t power_isAdcStable()
 {
-	curVol = measureVoltage();
-	if(curVol > POWER_THRESHOLD)
+	return (adcStable == 10);	//ADC is stable once 10 measurements are buffered
+}
+
+uint8_t power_isPowerConnected()	//return if last measured CurVol lower than Threshold
+{
+	uint16_t curVol = measureVoltage();
+	if(gracePeriod > 0)
+	{
+		return true;
+	}
+	if(curVol > POWER_HIGH_THRESHOLD)	//higher bound
 	{
 		return 1;
 	}
@@ -65,28 +71,85 @@ uint8_t power_isPowerConnected()
 	}
 }
 
+uint8_t power_isPowerLost()	//return if last measured CurVol lower than Threshold
+{
+	uint16_t curVol = measureVoltage();
+	if(gracePeriod > 0)
+	{
+		return false;
+	}
+	if(curVol < POWER_LOW_THRESHOLD)	//lower bound
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+uint8_t power_isPowerLow()	//return if last measured CurVol lower than Threshold
+{
+	uint16_t curVol = measureVoltage();
+	if(gracePeriod > 0)
+	{
+		return false;
+	}
+	if(curVol < LOWVOLTAGE)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+void power_SetGracePeriod()
+{
+	gracePeriod = 2; //2 seconds
+}
+
 void power_setInputPower(uint8_t state)
 {
 	if (state == 1)
 	{
-		PWR_IN1_PORT |= _BV(PWR_IN1_PIN); 		//turn on PB1
-		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
-		_delay_ms(500);
-		PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
+		PWR_IN_PORT &= ~(_BV(PWR_IN_PIN)); 		//turn on PB
 	}
 	else
 	{
-		PWR_IN1_PORT &= ~(_BV(PWR_IN1_PIN));
+		PWR_IN_PORT |= (_BV(PWR_IN_PIN));	//turn off PB
 	}
 }
 
-void power_SyncTask()	//every second
+void power_setLoad(uint8_t state)
 {
-	static uint8_t newPowerState = 0;
-	newPowerState = power_isPowerConnected();	//measure PowerState
-	if(newPowerState != curPowerState)			//if PowerState changed
+	if(state == 1)
 	{
-		curPowerState = newPowerState;			//save new PowerState
-		power_callback();						//call callback to notify
+		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
+	}
+	else
+	{
+		PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
+	}
+}
+
+void power_SyncTask()	//every 10ms
+{
+	static uint8_t ptr = 0, cnt=0;
+	if(adcStable < 10)	//count adcStable till 10
+	{
+		adcStable++;
+	}
+	volBuffer[ptr] = ADC;	//read ADC
+	ptr = (ptr+1) % 5;		//ringbuffer
+	cnt++;
+	if(cnt > 100)
+	{
+		cnt=0;
+		if(gracePeriod > 0)
+		{
+			gracePeriod--;
+		}
 	}
 }

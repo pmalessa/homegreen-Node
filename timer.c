@@ -12,7 +12,6 @@
 #include "display.h"
 #include "button.h"
 #include "power.h"
-#include "buzzer.h"
 #include "temp.h"
 
 void timer_init()
@@ -34,11 +33,7 @@ ISR(TIMER0_COMPA_vect)
 	cnt3++;
 	cnt4++;
 	cnt5++;
-	if(cnt4 > 10)	//10ms
-	{
-		cnt4=0;
-		//buzzer_SyncTask();
-	}
+
 	if(cnt > 100)	//100ms
 	{
 		cnt = 0;
@@ -48,12 +43,16 @@ ISR(TIMER0_COMPA_vect)
 	{
 		cnt2 = 0;
 		pump_vSyncTask();
-		power_SyncTask();
 	}
 	if(cnt3 > 50)	//50ms
 	{
 		cnt3 = 0;
 		button_SyncTask();
+	}
+	if(cnt4 > 10)
+	{
+		cnt4 = 0;
+		power_SyncTask();
 	}
 	if(cnt5 > 5000)	//every 5s
 	{

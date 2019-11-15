@@ -12,7 +12,12 @@ volatile uint16_t pump_running = 0;
 
 void pump_init()
 {
-	PUMP_DDR |= _BV(PUMP_PIN); //Set Pump Pin as Output
+	PUMP_DDR |= _BV(PUMP_PIN);					//Set Pump Pin as Output
+	//PUMP_TEST_DDR |= _BV(PUMP_TEST_PIN);		//Set Pump Test Pin as Output
+	//PUMP_SIG_DDR &= ~(_BV(PUMP_SIG_PIN));		//Set Pump Sig Pin as Input
+	
+	//PUMP_TEST_PORT &= ~(_BV(PUMP_TEST_PIN));	//turn off Pump Test Pin
+	PUMP_PORT &= ~(_BV(PUMP_PIN));				//turn off Pump Pin
 	pump_running = 0;
 }
 

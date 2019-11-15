@@ -9,52 +9,112 @@
 #include "display.h"
 #include "tm1637.h"
 
-volatile uint8_t dotmask, brightness, dig[6], blinking;
+volatile uint8_t dotmask, brightness, dig[6], blinking,blinkingEnabled, init;
 volatile uint16_t timeout = DISPLAY_TIMEOUT_S;
-
 void setdot(uint8_t dot_pos, uint8_t val);
+
+#define TM_DOT 0x80
+
+uint8_t numToByte[] =
+{
+    0x3F, // 0
+    0x06, // 1
+    0x5B, // 2
+    0x4F, // 3
+    0x66, // 4
+    0x6D, // 5
+    0x7D, // 6
+    0x07, // 7
+    0x7F, // 8
+    0x6F, // 9
+};
+
+uint8_t bootAnimation[] =
+{
+		0x76, // H
+		0x79, // E
+		0x38, // L
+		0x38, // L
+		0x3F, // O
+		0x00, // 0
+		0x00, // 0
+		0x00, // 0
+		0x00, // 0
+		0x00, // 0
+};
+
+bool display_boot()
+{
+	static uint8_t state = 0;
+	if(state == 0)	//clear first
+	{
+		display_clear();
+	}
+	if(state > 11)	//done
+	{
+		state = 0;
+		return true;
+	}
+	display_setByte(state%5, bootAnimation[state]);
+	state++;
+	return false;
+}
 
 void display_init()
 {
+	init = 0;
 	tm1637_Init();
 	dotmask = 0;
 	blinking = 0;
-	tm1637_Clear();
+	blinkingEnabled = 0;
+	display_clear();
+	init = 1;
 	display_setbrightness(7);
-	for(uint8_t i=0;i<6;i++)
-	{
-		dig[i]=0;
-	}
 }
 
-void display_boot()
+void display_deInit()
 {
 	display_clear();
-	display_setByte(0, 0x76); //H
-	_delay_ms(100);
-	display_setByte(1, 0x79); //E
-	_delay_ms(100);
-	display_setByte(2, 0x38); //L
-	_delay_ms(100);
-	display_setByte(3, 0x38); //L
-	_delay_ms(100);
-	display_setByte(4, 0x3F); //O
-	_delay_ms(100);
-	display_setByte(0, 0x00);
-	_delay_ms(100);
-	display_setByte(1, 0x00);
-	_delay_ms(100);
-	display_setByte(2, 0x00);
-	_delay_ms(100);
-	display_setByte(3, 0x00);
-	_delay_ms(100);
-	display_setByte(4, 0x00);
-	_delay_ms(100);
+	display_update();
+	init = 0;
+	tm1637_deInit();
+}
+
+bool display_wakeAnimation()
+{
+	static uint8_t state = 0, toggle = 0;
+	if(state == 0)	//clear first
+	{
+		display_clear();
+		display_setbrightness(7);
+	}
+	if(state > 5)	//done
+	{
+		state = 0;
+		return true;
+	}
+	switch (toggle) {
+		case 0:
+			display_setByte(state, 0x30);
+			toggle = 1;
+			break;
+		default:
+			display_setByte(state, 0x36);
+			toggle = 0;
+			state++;
+			break;
+	}
+	display_setbrightness(7);
+	return false;
 }
 
 void display_clear()
 {
-	tm1637_Clear();
+	for(uint8_t i=0;i<6;i++)
+	{
+		dig[i]=0;
+	}
+	dotmask = 0;
 }
 
 void display_resettimeout()
@@ -78,7 +138,6 @@ void setdot(uint8_t dot_pos, uint8_t val)
 	{
 		dotmask &= ~_BV(dot_pos);
 	}
-	tm1637_setDots(dotmask);
 }
 
 #define PUMPANIMATION_FRAMES 12
@@ -99,11 +158,11 @@ uint32_t pumpanimation[PUMPANIMATION_FRAMES] = {
 void display_pumpanimation(uint16_t countdown)
 {
 	static uint8_t pos = 0;
-	tm1637_setDots(0);
-	tm1637_setByte(0,(pumpanimation[pos]&0xFF000000)>>24);
-	tm1637_setByte(1,(pumpanimation[pos]&0x00FF0000)>>16);
-	tm1637_setByte(2,(pumpanimation[pos]&0x0000FF00)>>8);
-	tm1637_setByte(3,(pumpanimation[pos]&0x000000FF)>>0);
+	dotmask = 0;
+	dig[0] = (pumpanimation[pos]&0xFF000000)>>24;
+	dig[1] = (pumpanimation[pos]&0x00FF0000)>>16;
+	dig[2] = (pumpanimation[pos]&0x0000FF00)>>8;
+	dig[3] = (pumpanimation[pos]&0x000000FF)>>0;
 	display_setValue(DIGIT_COUNTDOWN,countdown/6);
 	pos++;
 	if(pos == 12)
@@ -124,7 +183,6 @@ void display_setByte(uint8_t pos, uint8_t byte)
 		setdot(pos,0);
 	}
 	dig[pos]=byte;
-	tm1637_setByte(pos,byte);
 }
 
 
@@ -138,21 +196,17 @@ void display_setValue(digit_t digit, uint16_t val)
 	}
 	if(val > 99) //higher than 9.9
 	{
-		dig[d] = val/100;
-		dig[d+1] = (val%100)/10;
+		display_setByte(d,numToByte[val/100]);
+		display_setByte(d+1,numToByte[(val%100)/10]);
 		setdot(d, 0);
 		setdot(d+1, 1);	//dot at second position
-		tm1637_setDigit(d,dig[d]);
-		tm1637_setDigit(d+1,dig[d+1]);
 	}
 	else
 	{
-		dig[d] = val/10;
-		dig[d+1] = val%10;
+		display_setByte(d,numToByte[val/10]);
+		display_setByte(d+1,numToByte[val%10]);
 		setdot(d, 1);	//dot at first position
 		setdot(d+1, 0);
-		tm1637_setDigit(d,dig[d]);
-		tm1637_setDigit(d+1,dig[d+1]);
 	}
 }
 
@@ -196,98 +250,82 @@ void display_setbrightness(uint8_t val)
 
 void display_setblinking(digit_t digit)
 {
-	switch (digit) {
-		case DIGIT_INTERVAL:
-			tm1637_setDigit(2,dig[2]); //reset values in non blinking digits
-			tm1637_setDigit(3,dig[3]);
-			tm1637_setDigit(4,dig[4]);
-			tm1637_setDigit(5,dig[5]);
-			blinking = 1;
-			break;
-		case DIGIT_DURATION:
-			tm1637_setDigit(0,dig[0]); //reset values in non blinking digits
-			tm1637_setDigit(1,dig[1]);
-			tm1637_setDigit(4,dig[4]);
-			tm1637_setDigit(5,dig[5]);
-			blinking = 2;
-			break;
-		case DIGIT_COUNTDOWN:
-			tm1637_setDigit(0,dig[0]); //reset values in non blinking digits
-			tm1637_setDigit(1,dig[1]);
-			tm1637_setDigit(2,dig[2]);
-			tm1637_setDigit(3,dig[3]);
-			blinking = 3;
-			break;
-		default:
-			break;
-	}
+	blinkingEnabled = digit+1;
+	blinking = 0;
 }
 
 void display_clearBlinking()
 {
-	tm1637_setDigit(0,dig[0]);	//reset values in non blinking digits
-	tm1637_setDigit(1,dig[1]);
-	tm1637_setDigit(2,dig[2]);
-	tm1637_setDigit(3,dig[3]);
-	tm1637_setDigit(4,dig[4]);
-	tm1637_setDigit(5,dig[5]);
-	blinking = 0;
+	blinkingEnabled = 0;
+}
+
+void dsend(uint8_t pos, uint8_t byte)
+{
+	tm1637_setByte(pos,byte | (dotmask & (1 << pos) ? TM_DOT : 0));
+}
+
+void display_update()
+{
+	if(init == 1)
+	{
+		if(!blinkingEnabled)
+		{
+			for(uint8_t i=0;i<6;i++)
+			{
+				dsend(i,dig[i]);
+			}
+		}
+		else
+		{
+			if(blinking < 6)	//on
+			{
+				for(uint8_t i=0;i<6;i++)
+				{
+					dsend(i,dig[i]);
+				}
+			}
+			else
+			{
+				switch (blinkingEnabled) {
+					case 1: //DIGIT_INTERVAL
+						dsend(0,0);
+						dsend(1,0);
+						dsend(2,dig[2]);
+						dsend(3,dig[3]);
+						dsend(4,dig[4]);
+						dsend(5,dig[5]);
+						break;
+					case 2: //DIGIT_DURATION
+						dsend(0,dig[0]);
+						dsend(1,dig[1]);
+						dsend(2,0);
+						dsend(3,0);
+						dsend(4,dig[4]);
+						dsend(5,dig[5]);
+						break;
+					case 3: //DIGIT_COUNTDOWN
+						dsend(0,dig[0]);
+						dsend(1,dig[1]);
+						dsend(2,dig[2]);
+						dsend(3,dig[3]);
+						dsend(4,0);
+						dsend(5,0);
+						break;
+					default:
+						break;
+				}
+			}
+		}
+	}
 }
 
 void display_SyncTask() //100ms
 {
-	static uint8_t cnt = 0, cnt2 = 0, toggle = 0;
-	cnt++;
-	if(cnt>2)
+	blinking++;
+	if(blinking > 10)
 	{
-		cnt = 0;
-		toggle++;
-		switch (blinking) {
-			case 1: //interval
-				if(toggle%3)
-				{	//set
-					tm1637_setDigit(0,dig[0]);
-					tm1637_setDigit(1,dig[1]);
-				}
-				else
-				{	//clear
-					tm1637_setByte(0,0);
-					tm1637_setByte(1,0);
-				}
-				break;
-			case 2: //duration
-				if(toggle%3)
-				{	//set
-					tm1637_setDigit(2,dig[2]);
-					tm1637_setDigit(3,dig[3]);
-				}
-				else
-				{	//clear
-					tm1637_setByte(2,0);
-					tm1637_setByte(3,0);
-				}
-				break;
-			case 3: //power
-				if(toggle%3)
-				{	//set
-					tm1637_setDigit(4,dig[4]);
-					tm1637_setDigit(5,dig[5]);
-				}
-				else
-				{	//clear
-					tm1637_setByte(4,0);
-					tm1637_setByte(5,0);
-				}
-				break;
-			default:
-				break;
-		}
-	}
-	cnt2++;
-	if(cnt2>10)	//every second
-	{
-		cnt2 = 0;
-		if(timeout > 0)
+		blinking = 0;
+		if(timeout > 0)	//every second
 		{
 			timeout--;
 		}
