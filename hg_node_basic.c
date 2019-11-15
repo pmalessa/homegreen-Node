@@ -15,7 +15,8 @@ typedef enum{
 	STATE_SLEEP,
 	STATE_WAKEUP,
 	STATE_PUMPING,
-	STATE_MAN_PUMPING
+	STATE_MAN_PUMPING,
+	STATE_CHARGE_CAP
 }state_t;
 state_t state = STATE_BOOT;
 uint8_t first = 1;
@@ -300,9 +301,7 @@ void state_machine()
 				}
 				if(power_isPowerLow())
 				{
-					power_setInputPower(1);
-					_delay_ms(500);			//wait for Powerbank to turn on
-					chargeCounter = 7; //4 seconds*7 = 28 seconds
+					switchTo(STATE_CHARGE_CAP);
 				}
 			}
 			else if(button_anyPressed())			//button interrupt wakeup
@@ -350,12 +349,55 @@ void state_machine()
 				}
 			}
 			break;
+		case STATE_CHARGE_CAP:
+			if(first)
+			{
+				first = 0;
+				power_setInputPower(1);
+				wakeupTimeout = 5;	//try for 5 seconds
+			}
+			if(power_isPowerConnected())
+			{
+				power_setLoad(1);
+				_delay_ms(150);
+				power_setLoad(0);
+				_delay_ms(150);
+				power_SetGracePeriod();	//ignore power lost for 2 seconds
+				BUZZER_PORT |= (1 << BUZZER_PIN);
+				//successfully woken up
+				display_init();
+				while(display_wakeAnimation() != true)
+				{
+					display_update();
+					power_setLoad(1);
+					_delay_ms(150);		//charging, producing load
+					power_setLoad(0);
+					_delay_ms(900);
+				}
+				switchTo(STATE_SLEEP);		//switch to Sleep state
+			}
+			else
+			{
+				if(wakeupTimeout)
+				{
+					wakeupTimeout--;
+					power_setLoad(1);
+					_delay_ms(500);
+					power_setLoad(0);
+					_delay_ms(500);
+				}
+				else
+				{
+					switchTo(STATE_SLEEP);	//unsuccessful, back to sleep, try 1min later?
+				}
+			}
+			break;
 		case STATE_PUMPING:
 		case STATE_MAN_PUMPING:
 			if(first)
 			{
 				first = 0;
-				_delay_ms(500);							//wait for Cap to charge a bit
+				_delay_ms(1000);							//wait for Cap to charge a bit
 				pump_enable(data_get(DATA_PUMP_DURATION));	//enable Pump for specified duration
 			}
 			if(pump_getCountdown() == 0)					//if pump duration reached, switch to Display State
@@ -419,12 +461,14 @@ void state_machine()
 				pump_enable(data_get(DATA_PUMP_DURATION));
 				display_setValue(DIGIT_COUNTDOWN,data_get(DATA_PUMP_DURATION));
 			}
-			if(!power_isPowerConnected()) //if power lost
+			/*
+			if(power_isPowerLow()) //if power lost
 			{
 				pump_disable();
 				switchTo(STATE_SLEEP);
 				break;
 			}
+			*/
 			break;
 	}
 }

@@ -10,7 +10,7 @@
 
 #define CHANNEL_1V1	0b1110
 
-#define LOWVOLTAGE 2500	//Low Voltage Threshold in mV
+#define LOWVOLTAGE 2800	//Low Voltage Threshold in mV
 #define POWER_LOW_THRESHOLD 3400
 #define POWER_HIGH_THRESHOLD 3700
 
