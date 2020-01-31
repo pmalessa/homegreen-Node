@@ -9,7 +9,6 @@
 #define PLATFORM_H_
 
 #include <avr/io.h>
-#define F_CPU 1000000UL  // 1 MHz
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>

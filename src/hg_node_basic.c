@@ -42,7 +42,7 @@ void anypress_callback()	//called if any Button pressed or released
 	display_resettimeout();
 }
 
-//mööp 1 otterdamoo <3
+//mï¿½ï¿½p 1 otterdamoo <3
 
 int main (void) {
 	//watchdog init
