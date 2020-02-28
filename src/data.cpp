@@ -5,30 +5,25 @@
  *      Author: pmale
  */
 
-#include "PLATFORM.h"
-#include "data.h"
+#include "data.hpp"
 #include "avr/eeprom.h"
 
-uint16_t data[DATA_SIZE];
-
-uint32_t countdown = 0;
-
-void data_init()
+void Data::Init()
 {
 	if(!(eeprom_read_dword((uint32_t *)ADR_INIT_CONST) == DATA_INIT_CONST))
 	{
-		data_set(DATA_INTERVAL,DATA_INTERVAL_DEFAULT);	//set default values
-		data_set(DATA_DURATION,DATA_DURATION_DEFAULT);
-		data_set(DATA_SETUP_TEMP,DATA_SETUP_TEMP_DEFAULT);
-		data_save();
+		Set(DATA_INTERVAL,DATA_INTERVAL_DEFAULT);	//set default values
+		Set(DATA_DURATION,DATA_DURATION_DEFAULT);
+		Set(DATA_SETUP_TEMP,DATA_SETUP_TEMP_DEFAULT);
+		Save();
 		eeprom_write_dword((uint32_t *)ADR_INIT_CONST, DATA_INIT_CONST);	//set init constant
 	}
 	data[DATA_INTERVAL] = eeprom_read_word((uint16_t *)ADR_INTERVAL);
 	data[DATA_DURATION] = eeprom_read_word((uint16_t *)ADR_DURATION);
-	data_resetCountdown();
+	resetCountdown();
 }
 
-void data_increment(data_type_t data_type)
+void Data::Increment(data_type_t data_type)
 {
 	if(data[data_type] < 100)	//smaller 100, +1 steps
 	{
@@ -40,7 +35,7 @@ void data_increment(data_type_t data_type)
 	}
 }
 
-void data_decrement(data_type_t data_type)
+void Data::Decrement(data_type_t data_type)
 {
 	if(data[data_type] > 1)
 	{
@@ -55,7 +50,7 @@ void data_decrement(data_type_t data_type)
 	}
 }
 
-void data_set(data_type_t data_type, uint16_t val)
+void Data::Set(data_type_t data_type, uint16_t val)
 {
 	switch (data_type) {
 		case DATA_INTERVAL:
@@ -75,7 +70,7 @@ void data_set(data_type_t data_type, uint16_t val)
 	}
 }
 
-uint16_t data_get(data_type_t data_type)
+uint16_t Data::Get(data_type_t data_type)
 {
 	switch (data_type) {
 		case DATA_INTERVAL:
@@ -93,7 +88,7 @@ uint16_t data_get(data_type_t data_type)
 	}
 }
 
-void data_decCountdown(uint8_t sec)
+void Data::decCountdown(uint8_t sec)
 {
 	if(countdown > sec)
 	{
@@ -105,22 +100,22 @@ void data_decCountdown(uint8_t sec)
 	}
 }
 
-void data_resetCountdown()
+void Data::resetCountdown()
 {
 	countdown = (uint32_t)data[DATA_INTERVAL]*360;	//converted to seconds
 }
 
-uint32_t data_getCountdown()
+uint32_t Data::getCountdown()
 {
 	return countdown;
 }
 
-uint16_t data_getCountdownDisplay()
+uint16_t Data::getCountdownDisplay()
 {
 	return (countdown/360);
 }
 
-void data_save()
+void Data::Save()
 {
 	cli();
 	_delay_ms(10);

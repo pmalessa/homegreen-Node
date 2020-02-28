@@ -5,17 +5,9 @@
  *      Author: pmale
  */
 
-#include "PLATFORM.h"
-#include "power.h"
+#include "power.hpp"
 
-uint16_t LoadCounter = 0;
-uint16_t measureVoltage();
-
-uint16_t volBuffer[5];
-volatile uint8_t adcStable = 0;
-uint8_t gracePeriod = 0;
-
-void power_init() {
+void Power::Init() {
 	//enable ADC in PRR
     ADCSRA = _BV(ADEN) | _BV(ADATE)| _BV(ADPS1) | _BV(ADPS0);	//Enable, Auto Trigger, DIV8
     ADCSRB = 0;													//Free running mode
@@ -28,33 +20,23 @@ void power_init() {
 
     PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
 	
-	adcStable = 0;
+	adcStable = false;
 	gracePeriod = 0;
+	powerTimer.setTimeStep(10); //10 ms
 }
 
-void power_deInit()
+void Power::DeInit()
 {
 	ADCSRA = 0;	//disable ADC
 	//disable ADC in PRR
 }
 
-uint16_t measureVoltage(){
-	uint32_t val = 0;
-	for(uint8_t i=0;i<5;i++)
-	{
-		val +=volBuffer[i];
-	}
-	val = val / 5;
-	uint32_t result = 1125300L / val; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
-	return result;
-}
-
-uint8_t power_isAdcStable()
+bool Power::isAdcStable()
 {
 	return (adcStable == 10);	//ADC is stable once 10 measurements are buffered
 }
 
-uint8_t power_isPowerConnected()	//return if last measured CurVol lower than Threshold
+bool Power::isPowerConnected()	//return if last measured CurVol lower than Threshold
 {
 	uint16_t curVol = measureVoltage();
 	if(gracePeriod > 0)
@@ -71,7 +53,7 @@ uint8_t power_isPowerConnected()	//return if last measured CurVol lower than Thr
 	}
 }
 
-uint8_t power_isPowerLost()	//return if last measured CurVol lower than Threshold
+bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
 {
 	uint16_t curVol = measureVoltage();
 	if(gracePeriod > 0)
@@ -88,7 +70,7 @@ uint8_t power_isPowerLost()	//return if last measured CurVol lower than Threshol
 	}
 }
 
-uint8_t power_isPowerLow()	//return if last measured CurVol lower than Threshold
+bool Power::isPowerLow()	//return if last measured CurVol lower than Threshold
 {
 	uint16_t curVol = measureVoltage();
 	if(gracePeriod > 0)
@@ -105,12 +87,12 @@ uint8_t power_isPowerLow()	//return if last measured CurVol lower than Threshold
 	}
 }
 
-void power_SetGracePeriod()
+void Power::setGracePeriod()
 {
 	gracePeriod = 2; //2 seconds
 }
 
-void power_setInputPower(uint8_t state)
+void Power::setInputPower(uint8_t state)
 {
 	if (state == 1)
 	{
@@ -122,7 +104,7 @@ void power_setInputPower(uint8_t state)
 	}
 }
 
-void power_setLoad(uint8_t state)
+void Power::setLoad(uint8_t state)
 {
 	if(state == 1)
 	{
@@ -134,22 +116,25 @@ void power_setLoad(uint8_t state)
 	}
 }
 
-void power_SyncTask()	//every 10ms
+void Power::run()
 {
 	static uint8_t ptr = 0, cnt=0;
-	if(adcStable < 10)	//count adcStable till 10
+	if(powerTimer.isTimeUp())	//every 10ms
 	{
-		adcStable++;
-	}
-	volBuffer[ptr] = ADC;	//read ADC
-	ptr = (ptr+1) % 5;		//ringbuffer
-	cnt++;
-	if(cnt > 100)
-	{
-		cnt=0;
-		if(gracePeriod > 0)
+		if(adcStable < 10)	//count adcStable till 10
 		{
-			gracePeriod--;
+			adcStable++;
+		}
+		volBuffer[ptr] = ADC;	//read ADC
+		ptr = (ptr+1) % 5;		//ringbuffer
+		cnt++;
+		if(cnt > 100)
+		{
+			cnt=0;
+			if(gracePeriod > 0)
+			{
+				gracePeriod--;
+			}
 		}
 	}
 }
