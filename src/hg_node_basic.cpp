@@ -15,8 +15,7 @@ typedef enum{
 	STATE_SLEEP,
 	STATE_WAKEUP,
 	STATE_PUMPING,
-	STATE_MAN_PUMPING,
-	STATE_CHARGE_CAP
+	STATE_MAN_PUMPING
 }state_t;
 state_t state = STATE_BOOT;
 uint8_t first = 1;
@@ -48,6 +47,7 @@ int main (void) {
 	//watchdog init
 	cli();
 	uint8_t reset_flag = MCUSR;
+	UNUSED(reset_flag);
 	MCUSR = 0;
 	MCUSR &= ~(1<<WDRF);								//unlock step 1
 	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
@@ -92,35 +92,44 @@ void state_machine()
 	static digit_t curdigit = DIGIT_INTERVAL;
 	static uint32_t prev_countdown = 0;
 	static Button::button_press press;
-	static uint16_t chargeCounter = 0;
+	static uint8_t wakeReason = 0;
 
 	switch (state) {
 		case STATE_BOOT:
+			/** Boot State
+			 * if PB connected -> Display State
+			 * else -> Sleep State
+			 */
 			if(first)
 			{
 				first = 0;
 				Power::setInputPower(1);
-				while(!Power::isAdcStable());			//wait till ADC is stable
+				while(!Power::isAdcStable());	//wait till ADC is stable
 				_delay_ms(100);
-				if(Power::isPowerConnected() == true)	//if PB connected
+				if(Power::isPowerConnected())	//if PB connected
 				{
 					Display::Init();
 					Display::StartAnimation(Display::ANIMATION_BOOT);
-					while(!Display::IsAnimationDone())
-					{
-						Display::Draw();
-					}
-					switchTo(STATE_DISPLAY);
-					break;
 				}
-				else									//if on BatPower
+				else							//if no PB connected
 				{
-					switchTo(STATE_SLEEP);
+					switchTo(STATE_SLEEP);		//-> Sleep State
 					break;
 				}
 			}
+			if(Display::IsAnimationDone())	//if Animation done
+			{
+				switchTo(STATE_DISPLAY);	//-> Display State
+			}
 			break;
 		case STATE_DISPLAY:
+			/** Display State
+			 * if Display Timeout -> Sleep State
+			 * if Long Config Press -> Config State
+			 * if Pump Countdown reached -> Pump State
+			 * if Power Lost -> Sleep State
+			 * if Man Long Press -> Man Pump State
+			 */
 			if(first)
 			{
 				first = 0;
@@ -142,29 +151,25 @@ void state_machine()
 			}
 			if(Data::getCountdown() == 0)			//if countdown reached, switch to PUMPING
 			{
+				Data::resetCountdown();				//reset Countdown
 				fade();
-				Data::resetCountdown();									//reset Countdown
-				Data::Set(Data::DATA_PUMP_DURATION,Data::Get(Data::DATA_DURATION));	//set Pump Duration to configured duration
 				switchTo(STATE_PUMPING);
 				break;
 			}
-			if(Power::isPowerLost()) //if power lost
+			if(Power::isPowerLost()) 	//if power lost
 			{
 				switchTo(STATE_SLEEP);
 				break;
 			}
-
 			if((Button::isPressed(Button::BUTTON_MAN) == Button::BUTTON_LONG_PRESSING))	//switch to MAN_PUMPING
 			{
 				Display::Clear();
 				Display::SetByte(4,0x3F);	//O
 				Display::SetByte(5,0x54);	//N
 				fade();
-				Data::Set(Data::DATA_PUMP_DURATION,DATA_PUMP_DURATION_DEFAULT);	//2.0min
 				switchTo(STATE_MAN_PUMPING);								//switch to MAN_PUMPING
 				break;
 			}
-
 			if((Button::isPressed(Button::BUTTON_SET) == Button::BUTTON_LONG_PRESSING))
 			{
 				fade();
@@ -173,27 +178,34 @@ void state_machine()
 			}
 			break;
 		case STATE_CONFIG:
+			/**
+			 * Config State
+			 * if long Set press -> save and Display State
+			 * if Plus/Minus Long/Short Press -> Increment/Decrement current Value
+			 * if short Set Press -> switch Value
+			 * if Display Timeout -> Display State
+			 * if Power Lost -> Sleep State
+			 */
 			if(first)
 			{
 				first = 0;
 				Display::ResetTimeout();
 				curdigit = DIGIT_INTERVAL;
 				Display::EnableBlinking(curdigit);
-
+				Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION));
+				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
+				Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
 			}
-			Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION));
-			Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
-			Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
-
-			if(Data::getCountdown() != prev_countdown)						//update Countdown
+			if(Power::isPowerLost()) //if power lost
+			{
+				Data::Save();
+				switchTo(STATE_SLEEP);
+				break;
+			}
+			if(Data::getCountdown() != prev_countdown)	//update Countdown
 			{
 				prev_countdown = Data::getCountdown();
 				Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
-				if(Power::isPowerLost()) //if power lost
-				{
-					switchTo(STATE_SLEEP);
-					break;
-				}
 			}
 			press = Button::isPressed(Button::BUTTON_PLUS);							//get Button Plus Press
 			if(press == Button::BUTTON_LONG_PRESSING)								//if long Press
@@ -236,8 +248,8 @@ void state_machine()
 			{
 				Data::Save();												//save to EEPROM
 				Display::DisableBlinking();
-				fade();
 				Data::resetCountdown();										//reset Countdown
+				fade();
 				switchTo(STATE_DISPLAY);									//switch to State Display
 				break;
 			}
@@ -256,13 +268,21 @@ void state_machine()
 			}
 			break;
 		case STATE_SLEEP:
+			/** Sleep State
+			 * Sleep and wait till next watchdog interrupt or button press.
+			 * wdt interrupt: 
+			 *     if countdown reached -> Wakeup State
+			 *     if Power Low -> Charge State
+			 *     else continue sleeping
+			 * button interrupt -> Wakeup state
+			 */
 			if(first)
 			{
 				first = 0;
-				Display::DeInit();
-				Power::setInputPower(0);				//disable Powerbank
+				Display::DeInit();					//DeInit Display
+				Power::setInputPower(0);			//disable Powerbank
 			}
-			BUZZER_PORT &= ~(1 << BUZZER_PIN);
+			BUZZER_PORT &= ~(1 << BUZZER_PIN);		//Turn off Debug Port
 			//PRR |= (1 << PRADC);
 		    set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//Sleep mode: only wdt and pin interrupt
 		    cli();									//disable interrupts
@@ -274,7 +294,6 @@ void state_machine()
 			//waked up
 			sleep_disable();						//disable sleep
 			//PRR &= ~(1 << PRADC);
-
 			sei();									//enable interrupts
 
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
@@ -282,27 +301,30 @@ void state_machine()
 				wdt_interrupt = 0;
 				if(Data::getCountdown() == 0)		//if countdown reached
 				{
+					wakeReason = 0; //Reason Wakeup for Countdown
 					switchTo(STATE_WAKEUP);
-				}
-				if(chargeCounter > 0)
-				{
-					chargeCounter--;
-				}
-				else
-				{
-					Power::setInputPower(0);
 				}
 				if(Power::isPowerLow())
 				{
-					switchTo(STATE_CHARGE_CAP);
+					wakeReason = 1; //Reason Wakeup for Charging
+					switchTo(STATE_WAKEUP);
 				}
 			}
 			else if(Button::isAnyPressed())			//button interrupt wakeup
 			{
+				wakeReason = 2; //Reason Wakeup for Button
 				switchTo(STATE_WAKEUP);
 			}
 			break;
 		case STATE_WAKEUP:
+			/** Wakeup State
+			 * Run multiple Load cycles to wakeup Powerbank
+			 * once successful, check Wakeup Reason:
+			 *     Countdown reached -> Pump State
+			 *     Power low -> Charge Cap and Sleep State
+			 *     Button -> Display State
+			 * if not successful, back to sleep and try again
+			 */
 			if(first)
 			{
 				first = 0;
@@ -316,60 +338,41 @@ void state_machine()
 				Power::setLoad(0);
 				_delay_ms(150);
 				Power::setGracePeriod();	//ignore power lost for 2 seconds
-				BUZZER_PORT |= (1 << BUZZER_PIN);
+				BUZZER_PORT |= (1 << BUZZER_PIN);	//Set Debug Pin
 				//successfully woken up
 				Display::Init();
-				Display::StartAnimation(Display::ANIMATION_WAKE);
-				while(!Display::IsAnimationDone())
+				switch (wakeReason)
 				{
-					Display::Draw();
-					_delay_ms(30);
+				case 0: //Countdown
+					Display::StartAnimation(Display::ANIMATION_WAKE);
+					while(!Display::IsAnimationDone())
+					{
+						Display::Draw();
+						_delay_ms(30);
+					}
+					switchTo(STATE_PUMPING);		//switch to Pump State
+					break;
+				case 1: //Charging
+					Display::StartAnimation(Display::ANIMATION_CHARGE);
+					while(!Display::IsAnimationDone())
+					{
+						Display::Draw();
+						_delay_ms(30);
+					}
+					switchTo(STATE_SLEEP);		//switch to Sleep State
+					break;
+				case 2: //Button
+					Display::StartAnimation(Display::ANIMATION_WAKE);
+					while(!Display::IsAnimationDone())
+					{
+						Display::Draw();
+						_delay_ms(30);
+					}
+					switchTo(STATE_DISPLAY);		//switch to Display State
+					break;
+				default:
+					break;
 				}
-				switchTo(STATE_DISPLAY);		//switch to Display State
-			}
-			else
-			{
-				if(wakeupTimeout)
-				{
-					wakeupTimeout--;
-					Power::setLoad(1);
-					_delay_ms(500);
-					Power::setLoad(0);
-					_delay_ms(500);
-				}
-				else
-				{
-					switchTo(STATE_SLEEP);	//unsuccessful, back to sleep, try 1min later?
-				}
-			}
-			break;
-		case STATE_CHARGE_CAP:
-			if(first)
-			{
-				first = 0;
-				Power::setInputPower(1);
-				wakeupTimeout = 5;	//try for 5 seconds
-			}
-			if(Power::isPowerConnected())
-			{
-				Power::setLoad(1);
-				_delay_ms(150);
-				Power::setLoad(0);
-				_delay_ms(150);
-				Power::setGracePeriod();	//ignore power lost for 2 seconds
-				BUZZER_PORT |= (1 << BUZZER_PIN);
-				//successfully woken up
-				Display::Init();
-				Display::StartAnimation(Display::ANIMATION_WAKE);
-				while(!Display::IsAnimationDone())
-				{
-					Display::Draw();
-					Power::setLoad(1);
-					_delay_ms(150);		//charging, producing load
-					Power::setLoad(0);
-					_delay_ms(900);
-				}
-				switchTo(STATE_SLEEP);		//switch to Sleep state
 			}
 			else
 			{
@@ -389,15 +392,22 @@ void state_machine()
 			break;
 		case STATE_PUMPING:
 		case STATE_MAN_PUMPING:
+			/** Pump State
+			 * Enable Pump and start Countdown
+			 * if Countdown reached -> Display State
+			 * if Man long Press -> stop Pump, Display State
+			 * if Plus/Minus Short/Long Press -> Increment/Decrement Countdown
+			 */
 			if(first)
 			{
 				first = 0;
-				_delay_ms(1000);							//wait for Cap to charge a bit
-				Pump::Enable(Data::Get(Data::DATA_PUMP_DURATION));	//enable Pump for specified duration
+				_delay_ms(1000);								//wait for Cap to charge a bit
+				Pump::Enable(Data::Get(Data::DATA_DURATION));	//enable Pump for specified duration
 				Display::StartAnimation(Display::ANIMATION_PUMP);
 			}
 			if(Pump::getCountdown() == 0)					//if pump duration reached, switch to Display State
 			{
+				Display::StopAnimation();
 				Data::resetCountdown();						//reset Countdown
 				fade();
 				switchTo(STATE_DISPLAY);
@@ -407,16 +417,16 @@ void state_machine()
 			press = Button::isPressed(Button::BUTTON_MAN);
 			if(press == Button::BUTTON_LONG_PRESSING)				//if Button MAN long pressed, disable Pump
 			{
+				Display::StopAnimation();
 				Display::Clear();
 				Display::SetByte(3,0x3F);	//O
 				Display::SetByte(4,0x71);	//F
 				Display::SetByte(5,0x71);	//F
 				Pump::Disable();
-				//Deltatimer 1500ms
+				fade();
 				switchTo(STATE_DISPLAY);					//switch to Display State
 				break;
 			}
-
 			press = Button::isPressed(Button::BUTTON_PLUS);
 			if(press == Button::BUTTON_LONG_PRESSING)				//if Plus Button long pressed, fast increment
 			{
@@ -454,14 +464,13 @@ void state_machine()
 				Pump::Enable(Data::Get(Data::DATA_PUMP_DURATION));
 				Display::SetValue(DIGIT_COUNTDOWN,Data::Get(Data::DATA_PUMP_DURATION));
 			}
-			/*
-			if(power_isPowerLow()) //if power lost
+			if(Power::isPowerLow()) //if power lost
 			{
-				pump_disable();
+				Pump::Disable();
+				Display::StopAnimation();
 				switchTo(STATE_SLEEP);
 				break;
 			}
-			*/
 			break;
 	}
 }

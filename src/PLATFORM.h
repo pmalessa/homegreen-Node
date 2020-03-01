@@ -52,4 +52,6 @@ typedef enum{
 	DIGIT_COUNTDOWN
 }digit_t;
 
+#define UNUSED(x) (void)(x)
+
 #endif /* PLATFORM_H_ */
