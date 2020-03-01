@@ -18,6 +18,11 @@ uint32_t Timer::getMillis()
 	return millis;
 }
 
+void Timer::count()
+{
+	millis++;
+}
+
 //1ms
 ISR(TIMER0_COMPA_vect)
 {

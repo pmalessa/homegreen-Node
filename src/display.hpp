@@ -10,7 +10,11 @@
 
 #include "PLATFORM.h"
 #include "DeltaTimer.hpp"
-#include "driver/tm1637.h"
+extern "C"
+{
+  #include "driver/tm1637.h"
+}
+
 
 class Display
 {

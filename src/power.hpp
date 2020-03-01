@@ -44,7 +44,7 @@ private:
 
     static uint16_t LoadCounter;
     static uint16_t volBuffer[5];
-    static bool adcStable;
+    static uint8_t adcStable;
     static uint8_t gracePeriod;
     static DeltaTimer powerTimer;
 };

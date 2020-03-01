@@ -30,7 +30,7 @@ bool DeltaTimer::isTimeUp()
 	{
 		return false; //endless
 	}
-	if(Timer::getMillis()-startTime > timeStep)
+	if(Timer::getMillis()-startTime > (uint32_t)timeStep)
 	{
 		startTime = Timer::getMillis();
 		return true;

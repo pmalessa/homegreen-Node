@@ -7,6 +7,12 @@
 
 #include "power.hpp"
 
+uint16_t Power::LoadCounter = 0;
+uint16_t Power::volBuffer[5] = {0};
+uint8_t Power::adcStable = 0;
+uint8_t Power::gracePeriod = 0;
+DeltaTimer Power::powerTimer;
+
 void Power::Init() {
 	//enable ADC in PRR
     ADCSRA = _BV(ADEN) | _BV(ADATE)| _BV(ADPS1) | _BV(ADPS0);	//Enable, Auto Trigger, DIV8

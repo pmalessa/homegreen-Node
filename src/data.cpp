@@ -8,6 +8,9 @@
 #include "data.hpp"
 #include "avr/eeprom.h"
 
+uint16_t Data::data[DATA_SIZE] = {0};
+uint32_t Data::countdown = 0;
+
 void Data::Init()
 {
 	if(!(eeprom_read_dword((uint32_t *)ADR_INIT_CONST) == DATA_INIT_CONST))

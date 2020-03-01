@@ -37,8 +37,6 @@
 //#define SLEEP_INTERVAL_S 4	//4000ms = 4s
 #define DISPLAY_TIMEOUT_S 5 //5sec
 
-typedef uint8_t bool;
-
 #define true 1
 #define false 0
 

@@ -10,6 +10,8 @@
 Display::animation_t Display::currentAnimation = ANIMATION_NONE;
 bool Display::isInitialized = false;
 bool Display::animationDone = false;
+DeltaTimer Display::displayTimer, Display::timeoutTimer;
+uint8_t Display::dotmask, Display::brightness, Display::dig[6], Display::blinkingEnabled, Display::blinkCounter;
 
 uint8_t numToByte[] =
 {

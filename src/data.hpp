@@ -49,7 +49,6 @@ private:
 	#define DATA_SETUP_TEMP_DEFAULT 20		//20*0.5 deg C = 10 deg C
 
 	static uint16_t data[DATA_SIZE];
-
 	static uint32_t countdown;
 };
 

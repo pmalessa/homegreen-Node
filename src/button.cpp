@@ -1,6 +1,10 @@
 
 #include "button.hpp"
 
+Button::button_struct Button::button[5] = {0};
+bool Button::anyPressed = 0;
+DeltaTimer Button::buttonTimer;
+
 void (*button_callback)(void) = nullptr;
 
 void Button::Init()
