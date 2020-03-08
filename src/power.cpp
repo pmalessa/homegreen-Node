@@ -1,16 +1,9 @@
-/*
- * power.c
- *
- *  Created on: 26.02.2019
- *      Author: pmale
- */
 
 #include "power.hpp"
 
 uint16_t Power::LoadCounter = 0;
-uint16_t Power::volBuffer[5] = {0};
+uint16_t Power::currentCapVoltage = 0;
 uint8_t Power::adcStable = 0;
-uint8_t Power::gracePeriod = 0;
 DeltaTimer Power::powerTimer;
 
 void Power::Init() {
@@ -22,12 +15,11 @@ void Power::Init() {
 	ADCSRA |= _BV(ADSC);										//start conversion
     PWR_IN_DDR |= _BV(PWR_IN_PIN);
     PWR_LOAD_DDR |= _BV(PWR_LOAD_PIN);
-    PWR_5V_DDR &= ~(_BV(PWR_LOAD_PIN)); 	//digital input
+    PWR_5V_DDR &= ~(_BV(PWR_5V_PIN)); 							//digital input
 
-    PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));	//turn off load
+    PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));						//turn off load
 	
 	adcStable = false;
-	gracePeriod = 0;
 	powerTimer.setTimeStep(10); //10 ms
 }
 
@@ -44,11 +36,7 @@ bool Power::isAdcStable()
 
 bool Power::isPowerConnected()	//return if last measured CurVol lower than Threshold
 {
-	uint16_t curVol = measureVoltage();
-	if(gracePeriod > 0)
-	{
-		return true;
-	}
+	uint16_t curVol = adc2vol();
 	if(curVol > POWER_HIGH_THRESHOLD)	//higher bound
 	{
 		return 1;
@@ -61,11 +49,7 @@ bool Power::isPowerConnected()	//return if last measured CurVol lower than Thres
 
 bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
 {
-	uint16_t curVol = measureVoltage();
-	if(gracePeriod > 0)
-	{
-		return false;
-	}
+	uint16_t curVol = adc2vol();
 	if(curVol < POWER_LOW_THRESHOLD)	//lower bound
 	{
 		return 1;
@@ -78,11 +62,7 @@ bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
 
 bool Power::isPowerLow()	//return if last measured CurVol lower than Threshold
 {
-	uint16_t curVol = measureVoltage();
-	if(gracePeriod > 0)
-	{
-		return false;
-	}
+	uint16_t curVol = adc2vol();
 	if(curVol < LOWVOLTAGE)
 	{
 		return 1;
@@ -91,11 +71,6 @@ bool Power::isPowerLow()	//return if last measured CurVol lower than Threshold
 	{
 		return 0;
 	}
-}
-
-void Power::setGracePeriod()
-{
-	gracePeriod = 2; //2 seconds
 }
 
 void Power::setInputPower(uint8_t state)
@@ -124,23 +99,12 @@ void Power::setLoad(uint8_t state)
 
 void Power::run()
 {
-	static uint8_t ptr = 0, cnt=0;
 	if(powerTimer.isTimeUp())	//every 10ms
 	{
 		if(adcStable < 10)	//count adcStable till 10
 		{
 			adcStable++;
 		}
-		volBuffer[ptr] = ADC;	//read ADC
-		ptr = (ptr+1) % 5;		//ringbuffer
-		cnt++;
-		if(cnt > 100)
-		{
-			cnt=0;
-			if(gracePeriod > 0)
-			{
-				gracePeriod--;
-			}
-		}
+		currentCapVoltage = (uint16_t) (ALPHA * ADC + (1-ALPHA) * currentCapVoltage);	//EWMA Filtering of ADC Input
 	}
 }

@@ -337,7 +337,6 @@ void state_machine()
 				_delay_ms(150);
 				Power::setLoad(0);
 				_delay_ms(150);
-				Power::setGracePeriod();	//ignore power lost for 2 seconds
 				BUZZER_PORT |= (1 << BUZZER_PIN);	//Set Debug Pin
 				//successfully woken up
 				Display::Init();

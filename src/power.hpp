@@ -21,19 +21,12 @@ public:
     static void setInputPower(uint8_t state);
     static void setLoad(uint8_t state);
     static bool isAdcStable();
-    static void setGracePeriod();
     static bool isPowerLost();
     static void run();
 private:
-    static uint16_t measureVoltage()
+    static uint16_t adc2vol()
     {
-	    uint32_t val = 0;
-	    for(uint8_t i=0;i<5;i++)
-	    {
-		    val +=volBuffer[i];
-	    }
-	    val = val / 5;
-	    uint32_t result = 1125300L / val; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
+	    uint32_t result = 1125300L / currentCapVoltage; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
 	    return result;
     }
 
@@ -42,10 +35,11 @@ private:
     #define POWER_LOW_THRESHOLD 3400
     #define POWER_HIGH_THRESHOLD 3700
 
+    #define ALPHA 0.7    //alpha value for EWMA Filtering
+
     static uint16_t LoadCounter;
-    static uint16_t volBuffer[5];
+    static uint16_t currentCapVoltage;
     static uint8_t adcStable;
-    static uint8_t gracePeriod;
     static DeltaTimer powerTimer;
 };
 
