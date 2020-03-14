@@ -20,6 +20,9 @@ void Button::Init()
 	BUTTON_DDR &= ~(_BV(BUTTON_SET));
 	BUTTON_DDR &= ~(_BV(BUTTON_MAN));
 
+	TOUCH_PWR_DDR |= (1 << TOUCH_PWR_PIN);
+	TOUCH_PWR_PORT |= (1 << TOUCH_PWR_PIN);
+
 	buttonTimer.setTimeStep(50);
 }
 
@@ -30,10 +33,22 @@ void Button::SetCallback(void (*func)(void))	//set pin change callback function
 
 void Button::Clear()
 {
-	for(uint8_t i=0;i<4;i++)
+	for(uint8_t i=0;i<5;i++)
 	{
 		button[i].pressed = 0;
 		button[i].duration = 0;
+	}
+}
+
+void Button::clearOtherThan(button_t but)
+{
+	for(uint8_t i=0;i<5;i++)
+	{
+		if(i != but)
+		{
+			button[i].pressed = 0;
+			button[i].duration = 0;
+		}
 	}
 }
 
@@ -46,89 +61,55 @@ void Button::run()
 {
 	if(buttonTimer.isTimeUp()) //50ms
 	{
-		if(BUTTON_PIN & (1 << BUTTON_MINUS))
+		for(uint8_t i=1;i<5;i++)	//1..4 -> PD1..PD4
 		{
-			if(button[BUTTON_MINUS].pressed == 0)	//if new press
+			if(BUTTON_PIN & (1 << i))
 			{
-				button[BUTTON_MINUS].pressed = 1;
-				button[BUTTON_MINUS].duration = 0;
+				if(button[i].pressed == 0)	//if new press
+				{
+					button[i].pressed = 1;
+					button[i].duration = 0;
+				}
+				button[i].duration++;
 			}
-			button[BUTTON_MINUS].duration++;
-		}
-		else
-		{
-			button[BUTTON_MINUS].pressed = 0;
-		}
-		if(BUTTON_PIN & (1 << BUTTON_SET))
-		{
-			if(button[BUTTON_SET].pressed == 0)	//if new press
+			else
 			{
-				button[BUTTON_SET].pressed = 1;
-				button[BUTTON_SET].duration = 0;
+				button[i].pressed = 0;
 			}
-			button[BUTTON_SET].duration++;
-		}
-		else
-		{
-			button[BUTTON_SET].pressed = 0;
-		}
-		if(BUTTON_PIN & (1 << BUTTON_PLUS))
-		{
-			if(button[BUTTON_PLUS].pressed == 0)	//if new press
-			{
-				button[BUTTON_PLUS].pressed = 1;
-				button[BUTTON_PLUS].duration = 0;
-			}
-			button[BUTTON_PLUS].duration++;
-		}
-		else
-		{
-			button[BUTTON_PLUS].pressed = 0;
-		}
-		if(BUTTON_PIN & (1 << BUTTON_MAN))
-		{
-			if(button[BUTTON_MAN].pressed == 0)	//if new press
-			{
-				button[BUTTON_MAN].pressed = 1;
-				button[BUTTON_MAN].duration = 0;
-			}
-			button[BUTTON_MAN].duration++;
-		}
-		else
-		{
-			button[BUTTON_MAN].pressed = 0;
 		}
 	}
 }
+
+/*
+	- button still pressed and duration > LONG PRESS THRESHOLD -> Long Press
+	- button released and last Press > SHORT PRESS THRESHOLD -> Short Press
+	- else no press
+*/
 
 Button::button_press Button::isPressed(Button::button_t but)
 {
 	if(button[but].pressed)
 	{
-		if(button[but].duration > BUTTON_LONG_PRESS)
+		if(button[but].duration > BUTTON_LONGPRESS_THRESHOLD)
 		{
-			button[but].duration = 0;
-			return BUTTON_LONG_PRESSING;
-		}
-		else
-		{
-			return BUTTON_PRESSING;
-		}
-	}
-	else
-	{
-		if(button[but].duration > BUTTON_SHORT_PRESS)
-		{
-			button[but].duration = 0;
-			return BUTTON_SHORT_PRESS;
-		}
-		else if(button[but].duration > BUTTON_LONG_PRESS)
-		{
-			button[but].duration = 0;
 			return BUTTON_LONG_PRESS;
 		}
 		else
 		{
+			return BUTTON_NO_PRESS;
+		}
+		
+	}
+	else
+	{
+		if(button[but].duration > BUTTON_SHORTPRESS_THRESHOLD)
+		{
+			button[but].duration = 0;
+			return BUTTON_SHORT_PRESS;
+		}
+		else
+		{
+			button[but].duration = 0;
 			return BUTTON_NO_PRESS;
 		}
 	}

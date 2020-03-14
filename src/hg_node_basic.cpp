@@ -7,6 +7,11 @@
 #include "data.hpp"
 #include "temp.hpp"
 #include "button.hpp"
+extern "C"
+{
+  #include "driver/light_ws2812.h"
+}
+
 
 typedef enum{
 	STATE_BOOT,
@@ -21,16 +26,25 @@ state_t state = STATE_BOOT;
 uint8_t first = 1;
 uint8_t wakeupTimeout = 0;
 volatile uint8_t wdt_interrupt = 0;
+struct cRGB led[1];
+DeltaTimer buttonStepTimer;
 
 ISR(WDT_vect) {
 	wdt_interrupt = 1;
 	Data::decCountdown(8);
+	led[0].r = 0x10;
+	ws2812_setleds(led,1);
+	_delay_ms(20);
+	led[0].r = 0x00;
+	ws2812_setleds(led,1);
+
 }
 
 void switchTo(state_t newstate)
 {
 	first = 1;
 	state = newstate;
+	Display::StopAnimation();
 	Button::Clear();
 }
 
@@ -53,6 +67,21 @@ int main (void) {
 	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
 	WDTCSR = (1 << WDIE) | (1 << WDP3) | (1 << WDP0); 	//Set to Interrupt Mode and "every 8 s"
 
+	led[0].r = 0;led[0].g = 0;led[0].b = 0;
+
+	led[0].g = 0x10;
+	ws2812_setleds(led,1);
+	_delay_ms(100);
+	led[0].g = 0x00;
+	ws2812_setleds(led,1);
+	_delay_ms(100);
+	led[0].g = 0x10;
+	ws2812_setleds(led,1);
+	_delay_ms(100);
+	led[0].g = 0x00;
+	ws2812_setleds(led,1);
+	_delay_ms(100);
+
 	//power saving
 //	PRR |= (1 << PRTWI) | (1 << PRTIM1);
 
@@ -62,11 +91,10 @@ int main (void) {
 	Pump::Init();
 	Power::Init();
 	Data::Init();
+	Display::Init();
 //	temp_init();
 
-	//init debug pin
-	BUZZER_DDR |= (1 << BUZZER_PIN);
-	BUZZER_PORT |= (1 << BUZZER_PIN);
+	buttonStepTimer.setTimeStep(100); //set step of long press
 
 	sei();
 
@@ -74,6 +102,9 @@ int main (void) {
 	{
 		state_machine();
 		Display::Draw();
+		Power::run();
+		Button::run();
+		_delay_ms(10);
 	}
 }
 
@@ -93,6 +124,7 @@ void state_machine()
 	static uint32_t prev_countdown = 0;
 	static Button::button_press press;
 	static uint8_t wakeReason = 0;
+	static uint8_t currentPump = 0;
 
 	switch (state) {
 		case STATE_BOOT:
@@ -104,7 +136,6 @@ void state_machine()
 			{
 				first = 0;
 				Power::setInputPower(1);
-				while(!Power::isAdcStable());	//wait till ADC is stable
 				_delay_ms(100);
 				if(Power::isPowerConnected())	//if PB connected
 				{
@@ -119,6 +150,7 @@ void state_machine()
 			}
 			if(Display::IsAnimationDone())	//if Animation done
 			{
+				Display::StopAnimation();
 				switchTo(STATE_DISPLAY);	//-> Display State
 			}
 			break;
@@ -161,7 +193,7 @@ void state_machine()
 				switchTo(STATE_SLEEP);
 				break;
 			}
-			if((Button::isPressed(Button::BUTTON_MAN) == Button::BUTTON_LONG_PRESSING))	//switch to MAN_PUMPING
+			if((Button::isPressed(Button::BUTTON_MAN) == Button::BUTTON_LONG_PRESS))	//switch to MAN_PUMPING
 			{
 				Display::Clear();
 				Display::SetByte(4,0x3F);	//O
@@ -170,7 +202,7 @@ void state_machine()
 				switchTo(STATE_MAN_PUMPING);								//switch to MAN_PUMPING
 				break;
 			}
-			if((Button::isPressed(Button::BUTTON_SET) == Button::BUTTON_LONG_PRESSING))
+			if((Button::isPressed(Button::BUTTON_SET) == Button::BUTTON_LONG_PRESS))
 			{
 				fade();
 				switchTo(STATE_CONFIG);										//switch to CONFIG
@@ -207,36 +239,31 @@ void state_machine()
 				prev_countdown = Data::getCountdown();
 				Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
 			}
-			press = Button::isPressed(Button::BUTTON_PLUS);							//get Button Plus Press
-			if(press == Button::BUTTON_LONG_PRESSING)								//if long Press
+			press = Button::isPressed(Button::BUTTON_PLUS);						//get Button Plus Press
+			if(press == Button::BUTTON_LONG_PRESS)								//if long Press
 			{
-				Display::DisableBlinking();
-				while(Button::isPressed(Button::BUTTON_PLUS))						//while pressed, fast increment
+				if(buttonStepTimer.isTimeUp())
 				{
+					Button::clearOtherThan(Button::BUTTON_PLUS);
 					Data::Increment((Data::data_type_t)curdigit);
 					Display::SetValue(curdigit,Data::Get((Data::data_type_t)curdigit));
-					Display::Draw();
-					_delay_ms(100);
 				}
-				Display::EnableBlinking(curdigit);
 			}
 			else if(press == Button::BUTTON_SHORT_PRESS)							//if short press, increment one step
 			{
 				Data::Increment((Data::data_type_t)curdigit);
 				Display::SetValue(curdigit,Data::Get((Data::data_type_t)curdigit));
 			}
+			
 			press = Button::isPressed(Button::BUTTON_MINUS);
-			if(press == Button::BUTTON_LONG_PRESSING)								//if long Press
+			if(press == Button::BUTTON_LONG_PRESS)								//if long Press
 			{
-				Display::DisableBlinking();
-				while(Button::isPressed(Button::BUTTON_MINUS))						//while pressed, fast decrement
+				if(buttonStepTimer.isTimeUp())
 				{
+					Button::clearOtherThan(Button::BUTTON_MINUS);
 					Data::Decrement((Data::data_type_t)curdigit);
 					Display::SetValue(curdigit,Data::Get((Data::data_type_t)curdigit));
-					Display::Draw();
-					_delay_ms(100);
 				}
-				Display::EnableBlinking(curdigit);
 			}
 			else if(press == Button::BUTTON_SHORT_PRESS)							//if short press, decrement one step
 			{
@@ -244,7 +271,7 @@ void state_machine()
 				Display::SetValue(curdigit,Data::Get((Data::data_type_t)curdigit));
 			}
 			press = Button::isPressed(Button::BUTTON_SET);							//get Set Button Press
-			if(press == Button::BUTTON_LONG_PRESSING || Display::IsTimeout())	//Long Press or IDLE timeout, Config done
+			if(press == Button::BUTTON_LONG_PRESS || Display::IsTimeout())	//Long Press or IDLE timeout, Config done
 			{
 				Data::Save();												//save to EEPROM
 				Display::DisableBlinking();
@@ -282,7 +309,7 @@ void state_machine()
 				Display::DeInit();					//DeInit Display
 				Power::setInputPower(0);			//disable Powerbank
 			}
-			BUZZER_PORT &= ~(1 << BUZZER_PIN);		//Turn off Debug Port
+			DEBUG1_PORT &= ~(1 << DEBUG1_PIN);		//Turn off Debug Port
 			//PRR |= (1 << PRADC);
 		    set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//Sleep mode: only wdt and pin interrupt
 		    cli();									//disable interrupts
@@ -337,7 +364,7 @@ void state_machine()
 				_delay_ms(150);
 				Power::setLoad(0);
 				_delay_ms(150);
-				BUZZER_PORT |= (1 << BUZZER_PIN);	//Set Debug Pin
+				DEBUG1_PORT |= (1 << DEBUG1_PIN);	//Set Debug Pin
 				//successfully woken up
 				Display::Init();
 				switch (wakeReason)
@@ -358,6 +385,7 @@ void state_machine()
 						Display::Draw();
 						_delay_ms(30);
 					}
+					Display::StopAnimation();
 					switchTo(STATE_SLEEP);		//switch to Sleep State
 					break;
 				case 2: //Button
@@ -412,9 +440,25 @@ void state_machine()
 				switchTo(STATE_DISPLAY);
 				break;
 			}
+			if(Pump::isHubConnected())
+			{
+				led[0].g = 0x10;
+				ws2812_setleds(led,1);
+				_delay_ms(20);
+				led[0].g = 0x00;
+				ws2812_setleds(led,1);
+			}
+			else
+			{
+				led[0].b = 0x10;
+				ws2812_setleds(led,1);
+				_delay_ms(20);
+				led[0].b = 0x00;
+				ws2812_setleds(led,1);
+			}
 			Display::ResetTimeout(); 						//Display always on
 			press = Button::isPressed(Button::BUTTON_MAN);
-			if(press == Button::BUTTON_LONG_PRESSING)				//if Button MAN long pressed, disable Pump
+			if(press == Button::BUTTON_LONG_PRESS)				//if Button MAN long pressed, disable Pump
 			{
 				Display::StopAnimation();
 				Display::Clear();
@@ -426,42 +470,35 @@ void state_machine()
 				switchTo(STATE_DISPLAY);					//switch to Display State
 				break;
 			}
-			press = Button::isPressed(Button::BUTTON_PLUS);
-			if(press == Button::BUTTON_LONG_PRESSING)				//if Plus Button long pressed, fast increment
+			else if(press == Button::BUTTON_SHORT_PRESS)			//if short Press, switch pump
 			{
-				while(Button::isPressed(Button::BUTTON_PLUS))
+				Pump::selectPump((currentPump++)%3);
+			}
+
+			press = Button::isPressed(Button::BUTTON_PLUS);
+			if(press == Button::BUTTON_LONG_PRESS)				//if Plus Button long pressed, fast increment
+			{
+				if(buttonStepTimer.isTimeUp())
 				{
-					Data::Increment(Data::DATA_PUMP_DURATION);
-					Pump::Enable(Data::Get(Data::DATA_PUMP_DURATION));
-					Display::SetValue(DIGIT_COUNTDOWN,Data::Get(Data::DATA_PUMP_DURATION));
-					Display::Draw();
-					_delay_ms(100);
+					Pump::Increment();
 				}
 			}
 			else if(press == Button::BUTTON_SHORT_PRESS)			//if short Press, one increment
 			{
-				Data::Increment(Data::DATA_PUMP_DURATION);
-				Pump::Enable(Data::Get(Data::DATA_PUMP_DURATION));
-				Display::SetValue(DIGIT_COUNTDOWN,Data::Get(Data::DATA_PUMP_DURATION));
+				Pump::Increment();
 			}
 
 			press = Button::isPressed(Button::BUTTON_MINUS);
-			if(press == Button::BUTTON_LONG_PRESSING)				//if Minus Button long pressed, fast decrement
+			if(press == Button::BUTTON_LONG_PRESS)				//if Minus Button long pressed, fast decrement
 			{
-				while(Button::isPressed(Button::BUTTON_MINUS))
+				if(buttonStepTimer.isTimeUp())
 				{
-					Data::Decrement(Data::DATA_PUMP_DURATION);
-					Pump::Enable(Data::Get(Data::DATA_PUMP_DURATION));
-					Display::SetValue(DIGIT_COUNTDOWN,Data::Get(Data::DATA_PUMP_DURATION));
-					Display::Draw();
-					_delay_ms(100);
+					Pump::Decrement();
 				}
 			}
 			else if(press == Button::BUTTON_SHORT_PRESS)			//if short pressed, one decrement
 			{
-				Data::Decrement(Data::DATA_PUMP_DURATION);
-				Pump::Enable(Data::Get(Data::DATA_PUMP_DURATION));
-				Display::SetValue(DIGIT_COUNTDOWN,Data::Get(Data::DATA_PUMP_DURATION));
+				Pump::Decrement();
 			}
 			if(Power::isPowerLow()) //if power lost
 			{

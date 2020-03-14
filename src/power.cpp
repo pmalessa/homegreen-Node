@@ -36,6 +36,7 @@ bool Power::isAdcStable()
 
 bool Power::isPowerConnected()	//return if last measured CurVol lower than Threshold
 {
+	return 1;
 	uint16_t curVol = adc2vol();
 	if(curVol > POWER_HIGH_THRESHOLD)	//higher bound
 	{
@@ -49,6 +50,7 @@ bool Power::isPowerConnected()	//return if last measured CurVol lower than Thres
 
 bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
 {
+	return 0;
 	uint16_t curVol = adc2vol();
 	if(curVol < POWER_LOW_THRESHOLD)	//lower bound
 	{
@@ -62,6 +64,7 @@ bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
 
 bool Power::isPowerLow()	//return if last measured CurVol lower than Threshold
 {
+	return 0;
 	uint16_t curVol = adc2vol();
 	if(curVol < LOWVOLTAGE)
 	{

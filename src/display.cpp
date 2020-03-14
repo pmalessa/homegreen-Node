@@ -6,6 +6,7 @@
  */
 
 #include "display.hpp"
+#include "pump.hpp"
 
 Display::animation_t Display::currentAnimation = ANIMATION_NONE;
 bool Display::isInitialized = false;
@@ -90,6 +91,10 @@ void Display::Clear()
 		dig[i]=0;
 	}
 	dotmask = 0;
+	for(uint8_t i=0;i<6;i++)
+	{
+		dsend(i,dig[i]);	//send all digits
+	}
 }
 
 //val = (0.1 .. 1.0,1.1 .. 10.0,11.0 .. 99.0) * 10 = 1..990
@@ -177,15 +182,12 @@ void Display::Draw()
 		switch (currentAnimation)
 		{
 		case ANIMATION_NONE:	//No Animation, Display or Blink values
-			if(blinkCounter > 8)
+			blinkCounter++;
+			if(blinkCounter > 5)	//blinkCounter 0..5
 			{
 				blinkCounter = 0;
 			}
-			else
-			{
-				blinkCounter++;
-			}
-			if(blinkingEnabled && blinkCounter > 5)	//Blinking
+			if(blinkingEnabled && blinkCounter > 4)	//Blinking ..5
 			{
 				switch (blinkingEnabled) {
 					case 1: //DIGIT_INTERVAL
@@ -216,7 +218,7 @@ void Display::Draw()
 						break;
 				}
 			}
-			else
+			else	//Not Blinking 0..4
 			{
 				for(uint8_t i=0;i<6;i++)
 				{
@@ -226,31 +228,42 @@ void Display::Draw()
 			break;
 		
 		case ANIMATION_BOOT:
+			if(animationDone)
+			{
+				break;
+			}
 			if(state == 0)	//clear first
 			{
 				Clear();
 			}
-			if(state > 11)	//done
+			if(state > 9)	//state = 10, done
 			{
 				state = 0;
 				animationDone = true;
 			}
-			SetByte(state%5, bootAnimation[state]);
+			SetByte(state%5, bootAnimation[state]); //state 0..9
 			state++;
+			for(uint8_t i=0;i<6;i++)
+			{
+				dsend(i,dig[i]);	//send all digits
+			}
 			break;
-
 		case ANIMATION_PUMP:
 			dotmask = 0;
 			dig[0] = (pumpanimation[state]&0xFF000000)>>24;
 			dig[1] = (pumpanimation[state]&0x00FF0000)>>16;
 			dig[2] = (pumpanimation[state]&0x0000FF00)>>8;
 			dig[3] = (pumpanimation[state]&0x000000FF)>>0;
-			//SetValue(DIGIT_COUNTDOWN,countdown/6);	//get Pump countdown
+			SetValue(DIGIT_COUNTDOWN,Pump::getCountdown()/6);	//get Pump countdown
 			state++;
 			if(state == 12)
 			{
 				state = 0;
 				animationDone = true;
+			}
+			for(uint8_t i=0;i<6;i++)
+			{
+				dsend(i,dig[i]);	//send all digits
 			}
 			break;
 
@@ -276,7 +289,10 @@ void Display::Draw()
 					state++;
 					break;
 			}
-			SetBrightness(7);
+			for(uint8_t i=0;i<6;i++)
+			{
+				dsend(i,dig[i]);	//send all digits
+			}
 			break;
 
 		case ANIMATION_CHARGE:
@@ -311,6 +327,10 @@ void Display::Draw()
 				}
 				SetBrightness(7);
 			}
+			for(uint8_t i=0;i<6;i++)
+			{
+				dsend(i,dig[i]);	//send all digits
+			}
 			break;
 		case ANIMATION_FADE:
 			static uint8_t min = 1;
@@ -323,6 +343,7 @@ void Display::Draw()
 				else
 				{
 					state = 1;
+					_delay_ms(400);
 				}
 			}
 			else
@@ -337,6 +358,10 @@ void Display::Draw()
 					animationDone = true;
 				}
 				
+			}
+			for(uint8_t i=0;i<6;i++)
+			{
+				dsend(i,dig[i]);	//send all digits
 			}
 			break;
 		default:

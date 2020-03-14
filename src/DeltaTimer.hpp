@@ -19,7 +19,7 @@ public:
 	bool isTimeUp();
 	void reset();
 private:
-	uint32_t startTime;
+	volatile uint32_t startTime;
 	int32_t timeStep;
 };
 
