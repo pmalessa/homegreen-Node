@@ -58,7 +58,6 @@ void Data::Set(data_type_t data_type, uint16_t val)
 	switch (data_type) {
 		case DATA_INTERVAL:
 		case DATA_DURATION:
-		case DATA_PUMP_DURATION:
 			if(val > 0 && val <= 990)
 			{
 				data[data_type] = val;
@@ -78,7 +77,6 @@ uint16_t Data::Get(data_type_t data_type)
 	switch (data_type) {
 		case DATA_INTERVAL:
 		case DATA_DURATION:
-		case DATA_PUMP_DURATION:
 			return data[data_type];
 			break;
 		case DATA_SETUP_TEMP:

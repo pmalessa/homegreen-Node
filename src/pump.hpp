@@ -27,6 +27,7 @@ public:
 private:
     static DeltaTimer pumpTimer;
     static uint16_t pumpCounter;
+
     #define PUMP_DDR DDRA
     #define PUMP_PORT PORTA
     #define PUMP_PIN PA1

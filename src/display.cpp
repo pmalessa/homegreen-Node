@@ -11,6 +11,7 @@
 Display::animation_t Display::currentAnimation = ANIMATION_NONE;
 bool Display::isInitialized = false;
 bool Display::animationDone = false;
+bool Display::resetAnimation = false;
 DeltaTimer Display::displayTimer, Display::timeoutTimer;
 uint8_t Display::dotmask, Display::brightness, Display::dig[6], Display::blinkingEnabled, Display::blinkCounter;
 
@@ -74,6 +75,7 @@ void Display::Init()
 	displayTimer.setTimeStep(REFRESH_RATE);
 	timeoutTimer.setTimeStep(DISPLAY_TIMEOUT_S*1000);
 	isInitialized = true;
+	resetAnimation = false;
 }
 
 void Display::DeInit()
@@ -159,12 +161,14 @@ void Display::StartAnimation(animation_t animation)
 {
 	currentAnimation = animation;
 	animationDone = false;
+	resetAnimation = true;
 }
 
 void Display::StopAnimation()
 {
 	currentAnimation = ANIMATION_NONE;
 	animationDone = true;
+	resetAnimation = true;
 }
 
 bool Display::IsAnimationDone()
@@ -179,6 +183,12 @@ void Display::Draw()
 
 	if(displayTimer.isTimeUp())	//only draw every 100ms
 	{
+		if(resetAnimation)
+		{
+			resetAnimation = false;
+			state = 0;
+			toggle = 0;
+		}
 		switch (currentAnimation)
 		{
 		case ANIMATION_NONE:	//No Animation, Display or Blink values
@@ -240,6 +250,7 @@ void Display::Draw()
 			{
 				state = 0;
 				animationDone = true;
+				break;
 			}
 			SetByte(state%5, bootAnimation[state]); //state 0..9
 			state++;

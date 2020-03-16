@@ -63,7 +63,7 @@ private:
     }
 
     static animation_t currentAnimation;
-    static bool isInitialized, animationDone;
+    static bool isInitialized, animationDone, resetAnimation;
     static DeltaTimer displayTimer, timeoutTimer;
     static uint8_t dotmask, brightness, dig[6], blinkingEnabled ,blinkCounter;
     

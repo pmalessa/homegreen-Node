@@ -69,19 +69,6 @@ int main (void) {
 
 	led[0].r = 0;led[0].g = 0;led[0].b = 0;
 
-	led[0].g = 0x10;
-	ws2812_setleds(led,1);
-	_delay_ms(100);
-	led[0].g = 0x00;
-	ws2812_setleds(led,1);
-	_delay_ms(100);
-	led[0].g = 0x10;
-	ws2812_setleds(led,1);
-	_delay_ms(100);
-	led[0].g = 0x00;
-	ws2812_setleds(led,1);
-	_delay_ms(100);
-
 	//power saving
 //	PRR |= (1 << PRTWI) | (1 << PRTIM1);
 
@@ -104,6 +91,7 @@ int main (void) {
 		Display::Draw();
 		Power::run();
 		Button::run();
+		Pump::run();
 		_delay_ms(10);
 	}
 }
@@ -139,11 +127,35 @@ void state_machine()
 				_delay_ms(100);
 				if(Power::isPowerConnected())	//if PB connected
 				{
+					led[0].g = 0x10;
+					ws2812_setleds(led,1);
+					_delay_ms(100);
+					led[0].g = 0x00;
+					ws2812_setleds(led,1);
+					_delay_ms(100);
+					led[0].g = 0x10;
+					ws2812_setleds(led,1);
+					_delay_ms(100);
+					led[0].g = 0x00;
+					ws2812_setleds(led,1);
+					_delay_ms(100);
 					Display::Init();
 					Display::StartAnimation(Display::ANIMATION_BOOT);
 				}
 				else							//if no PB connected
 				{
+					led[0].b = 0x10;
+					ws2812_setleds(led,1);
+					_delay_ms(100);
+					led[0].b = 0x00;
+					ws2812_setleds(led,1);
+					_delay_ms(100);
+					led[0].b = 0x10;
+					ws2812_setleds(led,1);
+					_delay_ms(100);
+					led[0].b = 0x00;
+					ws2812_setleds(led,1);
+					_delay_ms(100);
 					switchTo(STATE_SLEEP);		//-> Sleep State
 					break;
 				}
@@ -429,7 +441,7 @@ void state_machine()
 			{
 				first = 0;
 				_delay_ms(1000);								//wait for Cap to charge a bit
-				Pump::Enable(Data::Get(Data::DATA_DURATION));	//enable Pump for specified duration
+				Pump::Enable(Data::Get(Data::DATA_DURATION)*6);	//enable Pump for specified duration
 				Display::StartAnimation(Display::ANIMATION_PUMP);
 			}
 			if(Pump::getCountdown() == 0)					//if pump duration reached, switch to Display State

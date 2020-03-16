@@ -13,12 +13,17 @@ void Power::Init() {
 	ADMUX = CHANNEL_1V1;										//measuring 1.1V Reference Voltage
 	ADMUX |= (1<<REFS0);										//using VCC Reference
 	ADCSRA |= _BV(ADSC);										//start conversion
-    PWR_IN_DDR |= _BV(PWR_IN_PIN);
+    
+	PWR_IN_DDR |= _BV(PWR_IN_PIN);
     PWR_LOAD_DDR |= _BV(PWR_LOAD_PIN);
     PWR_5V_DDR &= ~(_BV(PWR_5V_PIN)); 							//digital input
+	PWR_5V_PORT &= ~(_BV(PWR_5V_PIN));							//turn off internal pullup
 
     PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));						//turn off load
 	
+	currentCapVoltage = ADC;	//scrap measurement
+	currentCapVoltage = ADC;
+
 	adcStable = false;
 	powerTimer.setTimeStep(10); //10 ms
 }
@@ -34,9 +39,22 @@ bool Power::isAdcStable()
 	return (adcStable == 10);	//ADC is stable once 10 measurements are buffered
 }
 
-bool Power::isPowerConnected()	//return if last measured CurVol lower than Threshold
+bool Power::isPowerConnected()	//check if the 5V Pin is high
 {
-	return 1;
+	setLoad(1);
+	_delay_ms(10);
+	uint8_t state = PWR_5V_PINREG & (1 << PWR_5V_PIN);	//read 5V Pin
+	setLoad(0);
+	if(state)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+	
+	/*
 	uint16_t curVol = adc2vol();
 	if(curVol > POWER_HIGH_THRESHOLD)	//higher bound
 	{
@@ -46,11 +64,11 @@ bool Power::isPowerConnected()	//return if last measured CurVol lower than Thres
 	{
 		return 0;
 	}
+	*/
 }
 
 bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
 {
-	return 0;
 	uint16_t curVol = adc2vol();
 	if(curVol < POWER_LOW_THRESHOLD)	//lower bound
 	{
@@ -64,7 +82,6 @@ bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
 
 bool Power::isPowerLow()	//return if last measured CurVol lower than Threshold
 {
-	return 0;
 	uint16_t curVol = adc2vol();
 	if(curVol < LOWVOLTAGE)
 	{
