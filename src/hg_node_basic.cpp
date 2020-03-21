@@ -259,6 +259,7 @@ void state_machine()
 					Button::clearOtherThan(Button::BUTTON_PLUS);
 					Data::Increment((Data::data_type_t)curdigit);
 					Display::SetValue(curdigit,Data::Get((Data::data_type_t)curdigit));
+					Display::ResetTimeout();
 				}
 			}
 			else if(press == Button::BUTTON_SHORT_PRESS)							//if short press, increment one step
@@ -275,6 +276,7 @@ void state_machine()
 					Button::clearOtherThan(Button::BUTTON_MINUS);
 					Data::Decrement((Data::data_type_t)curdigit);
 					Display::SetValue(curdigit,Data::Get((Data::data_type_t)curdigit));
+					Display::ResetTimeout();
 				}
 			}
 			else if(press == Button::BUTTON_SHORT_PRESS)							//if short press, decrement one step
@@ -304,6 +306,19 @@ void state_machine()
 					curdigit = DIGIT_DURATION;
 					Display::EnableBlinking(curdigit);
 				}
+			}
+			press = Button::isPressed(Button::BUTTON_MAN);						//get Button MAN Press
+			if(press == Button::BUTTON_LONG_PRESS)								//if long Press
+			{
+				Display::ResetTimeout();
+				Data::setDefault();	//reset EEPROM
+				Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION));
+				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
+				Data::resetCountdown();
+				Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
+				fade();
+				switchTo(STATE_DISPLAY);
+				break;
 			}
 			break;
 		case STATE_SLEEP:
@@ -368,7 +383,7 @@ void state_machine()
 			{
 				first = 0;
 				Power::setInputPower(1);
-				wakeupTimeout = 5;	//try for 5 seconds
+				wakeupTimeout = 20;	//try for 4 seconds
 			}
 			if(Power::isPowerConnected())
 			{
@@ -419,9 +434,9 @@ void state_machine()
 				{
 					wakeupTimeout--;
 					Power::setLoad(1);
-					_delay_ms(500);
+					_delay_ms(200);
 					Power::setLoad(0);
-					_delay_ms(500);
+					_delay_ms(200);
 				}
 				else
 				{
@@ -512,7 +527,7 @@ void state_machine()
 			{
 				Pump::Decrement();
 			}
-			if(Power::isPowerLow()) //if power lost
+			if(Power::isPowerLost()) //if power lost
 			{
 				Pump::Disable();
 				Display::StopAnimation();

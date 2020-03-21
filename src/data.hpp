@@ -31,6 +31,7 @@ public:
 	static uint16_t getCountdownDisplay();
 	static uint32_t getCountdown();
 	static void resetCountdown();
+	static void setDefault();
 
 private:
 	enum data_adr{
@@ -43,7 +44,7 @@ private:
 	};
 	#define DATA_INIT_CONST 0xF00DBABE
 	#define DATA_INTERVAL_DEFAULT  120		//1..990 = 0.1..99.0
-	#define DATA_DURATION_DEFAULT  30		//1..990 = 0.1..99.0
+	#define DATA_DURATION_DEFAULT  20		//1..990 = 0.1..99.0
 	#define DATA_SETUP_TEMP_DEFAULT 20		//20*0.5 deg C = 10 deg C
 
 	static uint16_t data[DATA_SIZE];

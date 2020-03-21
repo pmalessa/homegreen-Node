@@ -69,6 +69,16 @@ bool Power::isPowerConnected()	//check if the 5V Pin is high
 
 bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
 {
+	uint8_t state = PWR_5V_PINREG & (1 << PWR_5V_PIN);	//read 5V Pin
+	if(state)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+	/*
 	uint16_t curVol = adc2vol();
 	if(curVol < POWER_LOW_THRESHOLD)	//lower bound
 	{
@@ -78,6 +88,7 @@ bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
 	{
 		return 0;
 	}
+	*/
 }
 
 bool Power::isPowerLow()	//return if last measured CurVol lower than Threshold

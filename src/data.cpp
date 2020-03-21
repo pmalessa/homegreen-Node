@@ -15,11 +15,7 @@ void Data::Init()
 {
 	if(!(eeprom_read_dword((uint32_t *)ADR_INIT_CONST) == DATA_INIT_CONST))
 	{
-		Set(DATA_INTERVAL,DATA_INTERVAL_DEFAULT);	//set default values
-		Set(DATA_DURATION,DATA_DURATION_DEFAULT);
-		Set(DATA_SETUP_TEMP,DATA_SETUP_TEMP_DEFAULT);
-		Save();
-		eeprom_write_dword((uint32_t *)ADR_INIT_CONST, DATA_INIT_CONST);	//set init constant
+		setDefault();
 	}
 	data[DATA_INTERVAL] = eeprom_read_word((uint16_t *)ADR_INTERVAL);
 	data[DATA_DURATION] = eeprom_read_word((uint16_t *)ADR_DURATION);
@@ -125,4 +121,13 @@ void Data::Save()
 	eeprom_write_word((uint16_t *)ADR_SETUP_TEMP, data[DATA_SETUP_TEMP]);	//save setup temp
 	_delay_ms(10);
 	sei();
+}
+
+void Data::setDefault()
+{
+	Set(DATA_INTERVAL,DATA_INTERVAL_DEFAULT);	//set default values
+	Set(DATA_DURATION,DATA_DURATION_DEFAULT);
+	Set(DATA_SETUP_TEMP,DATA_SETUP_TEMP_DEFAULT);
+	Save();
+	eeprom_write_dword((uint32_t *)ADR_INIT_CONST, DATA_INIT_CONST);	//set init constant
 }
