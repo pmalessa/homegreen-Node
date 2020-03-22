@@ -16,17 +16,20 @@ class Pump
 
 public:
     static void Init();
-    static void Enable(uint16_t sec);
-    static void Disable();
+    static void Start();
+    static void Stop();
+    static void setCountdown(uint16_t sec);
     static uint16_t getCountdown();
     static void Increment();
     static void Decrement();
     static void run();
     static bool isHubConnected();
-    static void selectPump(uint8_t pumpID);
+    static void setCurrentPump(uint8_t pumpID);
+    static uint8_t getCurrentPump();
 private:
     static DeltaTimer pumpTimer;
     static uint16_t pumpCounter;
+    static uint8_t currentPump;
 
     #define PUMP_DDR DDRA
     #define PUMP_PORT PORTA
@@ -40,19 +43,19 @@ private:
     #define PUMP_TEST_PORT PORTC
     #define PUMP_TEST_PIN PC0
 
-    #define USB1_DDR DDRC
-    #define USB1_PORT PORTC
-    #define USB1_PIN PC1
-    #define USB1_PINREG PINC
+    #define USBM_DDR DDRC
+    #define USBM_PORT PORTC
+    #define USBM_PIN PC1
+    #define USBM_PINREG PINC
 
-    #define USB2_DDR DDRD
-    #define USB2_PORT PORTD
-    #define USB2_PIN PD0
-    #define USB2_PINREG PIND
+    #define USBP_DDR DDRD
+    #define USBP_PORT PORTD
+    #define USBP_PIN PD0
+    #define USBP_PINREG PIND
 
-    #define PUMP_1 1
-    #define PUMP_2 2
-    #define PUMP_3 3
+    #define PUMP_1 0
+    #define PUMP_2 1
+    #define PUMP_3 2
 
 
 };

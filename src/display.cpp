@@ -15,7 +15,7 @@ bool Display::resetAnimation = false;
 DeltaTimer Display::displayTimer, Display::timeoutTimer;
 uint8_t Display::dotmask, Display::brightness, Display::dig[6], Display::blinkingEnabled, Display::blinkCounter;
 
-uint8_t numToByte[] =
+uint8_t numToByteArray[] =
 {
     0x3F, // 0
     0x06, // 1
@@ -43,20 +43,12 @@ uint8_t bootAnimation[] =
 		0x00, // 0
 };
 
-#define PUMPANIMATION_FRAMES 12
-uint32_t pumpanimation[PUMPANIMATION_FRAMES] = {
-		0x01010000,
-		0x00010100,
-		0x00000101,
-		0x00000003,
-		0x00000006,
-		0x0000000C,
-		0x00000808,
-		0x00080800,
-		0x08080000,
-		0x18000000,
-		0x30000000,
-		0x21000000
+#define PUMPANIMATION_FRAMES 4
+uint16_t pumpanimation[PUMPANIMATION_FRAMES] = {
+		0x0108,
+		0x0801,
+		0x1002,
+		0x2004
 };
 
 //---------------------------------------
@@ -109,15 +101,15 @@ void Display::SetValue(digit_t digit, uint16_t val)
 	}
 	if(val > 99) //higher than 9.9
 	{
-		SetByte(d,numToByte[val/100]);
-		SetByte(d+1,numToByte[(val%100)/10]);
+		SetByte(d,numToByteArray[val/100]);
+		SetByte(d+1,numToByteArray[(val%100)/10]);
 		setDot(d, 0);
 		setDot(d+1, 1);	//dot at second position
 	}
 	else
 	{
-		SetByte(d,numToByte[val/10]);
-		SetByte(d+1,numToByte[val%10]);
+		SetByte(d,numToByteArray[val/10]);
+		SetByte(d+1,numToByteArray[val%10]);
 		setDot(d, 1);	//dot at first position
 		setDot(d+1, 0);
 	}
@@ -134,6 +126,15 @@ void Display::SetByte(uint8_t pos, uint8_t byte)
 		setDot(pos,0);
 	}
 	dig[pos]=byte;
+}
+
+uint8_t Display::numToByte(uint8_t num)
+{
+	if(num < 10)
+	{
+		return numToByteArray[num];
+	}
+	return 0;
 }
 
 //0..7
@@ -261,13 +262,13 @@ void Display::Draw()
 			break;
 		case ANIMATION_PUMP:
 			dotmask = 0;
-			dig[0] = (pumpanimation[state]&0xFF000000)>>24;
-			dig[1] = (pumpanimation[state]&0x00FF0000)>>16;
-			dig[2] = (pumpanimation[state]&0x0000FF00)>>8;
-			dig[3] = (pumpanimation[state]&0x000000FF)>>0;
+			dig[0] = 0x73; //P
+			dig[1] = numToByte(Pump::getCurrentPump()+1);
+			dig[2] = (pumpanimation[state]&0xFF00)>>8;
+			dig[3] = (pumpanimation[state]&0x00FF)>>0;
 			SetValue(DIGIT_COUNTDOWN,Pump::getCountdown()/6);	//get Pump countdown
 			state++;
-			if(state == 12)
+			if(state == PUMPANIMATION_FRAMES)
 			{
 				state = 0;
 				animationDone = true;

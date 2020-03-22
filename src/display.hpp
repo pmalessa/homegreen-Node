@@ -45,6 +45,7 @@ public:
     static void Draw();
     static void ResetTimeout();
     static bool IsTimeout();
+    static uint8_t numToByte(uint8_t num);
 private:
     static void setDot(uint8_t dot_pos, uint8_t val) //left to right
     {

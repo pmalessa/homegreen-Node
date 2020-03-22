@@ -9,6 +9,7 @@
 
 DeltaTimer Pump::pumpTimer;
 uint16_t Pump::pumpCounter = 0;
+uint8_t Pump::currentPump = PUMP_1;
 
 void Pump::Init()
 {
@@ -20,11 +21,12 @@ void Pump::Init()
 	PUMP_PORT &= ~(_BV(PUMP_PIN));				//turn off Pump Pin
 	pumpCounter = 0;
 	pumpTimer.setTimeStep(1000); //1 second
+	currentPump = PUMP_1;
 
-    USB1_DDR |= (_BV(USB1_PIN));                //USB1 Output
-    USB2_DDR |= (_BV(USB2_PIN));                //USB2 Output
-    USB1_PORT &= ~(_BV(USB1_PIN));                //set low
-    USB2_PORT &= ~(_BV(USB2_PIN));                //set low
+    USBP_DDR |= (_BV(USBP_PIN));                //USB1 Output
+    USBM_DDR |= (_BV(USBM_PIN));                //USB2 Output
+    USBP_PORT &= ~(_BV(USBP_PIN));                //set low
+    USBM_PORT &= ~(_BV(USBM_PIN));                //set low
 
 }
 
@@ -44,7 +46,12 @@ void Pump::run()
 	}
 }
 
-void Pump::Enable(uint16_t sec)
+void Pump::Start()
+{
+	currentPump = PUMP_1;
+}
+
+void Pump::setCountdown(uint16_t sec)
 {
 	pumpCounter = sec;
 }
@@ -66,7 +73,7 @@ void Pump::Decrement()	//1min steps
 	}
 }
 
-void Pump::Disable()
+void Pump::Stop()
 {
 	pumpCounter = 0;
 }
@@ -76,22 +83,41 @@ uint16_t Pump::getCountdown()
 	return pumpCounter;
 }
 
+uint8_t Pump::getCurrentPump()
+{
+	return currentPump;
+}
+
 bool Pump::isHubConnected()
 {
 	uint8_t usb1_cnt = 0, usb2_cnt = 0;
 
-    USB1_DDR &= ~(_BV(USB1_PIN));                //USB1 Input
-    USB2_DDR &= ~(_BV(USB2_PIN));                //USB2 Input
-    USB1_PORT |= _BV(USB1_PIN);                    //PullUp
-    USB2_PORT |= _BV(USB2_PIN);                    //PullUp
+	PUMP_PORT |= _BV(PUMP_PIN);	//turn on
+
+    USBP_DDR &= ~(_BV(USBP_PIN));                //USBP Input
+    USBM_DDR &= ~(_BV(USBM_PIN));                //USB2 Input
+    USBP_PORT &= ~(_BV(USBP_PIN));                    //No PullUp
+    USBM_PORT &= ~(_BV(USBM_PIN));                    //No PullUp
     _delay_ms(10);
 
     for(uint8_t i=0;i<10;i++)    //check pin 10 times to ignore floating pin
     {
-        usb1_cnt += (USB1_PINREG & (1 << USB1_PIN));
-        usb2_cnt += (USB2_PINREG & (1 << USB2_PIN));
+		if(USBP_PINREG & (1 << USBP_PIN))
+		{
+			usb1_cnt++;
+		}
+		if(USBM_PINREG & (1 << USBM_PIN))
+		{
+			usb2_cnt++;
+		}
         _delay_ms(1);
     }
+	PUMP_PORT &= ~(_BV(PUMP_PIN));	//turn off
+    USBP_DDR |= (_BV(USBP_PIN));                //USBP Output
+    USBM_DDR |= (_BV(USBM_PIN));                //USB2 Output
+    USBP_PORT &= ~(_BV(USBP_PIN));                //set low
+    USBM_PORT &= ~(_BV(USBM_PIN));                //set low
+
     if(usb1_cnt > 8 && usb2_cnt < 2)    //Hub Detection, High on USB+, Low on USB-
     {
         return true;
@@ -100,27 +126,25 @@ bool Pump::isHubConnected()
     {
         return false;
     }
-
-    USB1_DDR |= (_BV(USB1_PIN));                //USB1 Output
-    USB2_DDR |= (_BV(USB2_PIN));                //USB2 Output
-    USB1_PORT &= ~(_BV(USB1_PIN));                //set low
-    USB2_PORT &= ~(_BV(USB2_PIN));                //set low
 }
 
-void Pump::selectPump(uint8_t pumpID)
+void Pump::setCurrentPump(uint8_t pumpID)
 {
 	switch (pumpID) {
 		case PUMP_1:
-		    USB1_PORT &= ~(_BV(USB1_PIN));                //1 1 -> pump 1
-		    USB2_PORT &= ~(_BV(USB2_PIN));
+			currentPump = PUMP_1;
+		    USBP_PORT &= ~(_BV(USBP_PIN));                //0 0 -> pump 1
+		    USBM_PORT &= ~(_BV(USBM_PIN));
 			break;
 		case PUMP_2:
-		    USB1_PORT |= (_BV(USB1_PIN));                //0 0 -> pump 2
-		    USB2_PORT |= (_BV(USB2_PIN));
+			currentPump = PUMP_2;
+		    USBP_PORT |= (_BV(USBP_PIN));                //1 1 -> pump 2
+		    USBM_PORT |= (_BV(USBM_PIN));
 			break;
 		case PUMP_3:
-		    USB1_PORT &= ~(_BV(USB1_PIN));                //0 1 -> pump 3
-		    USB2_PORT |= (_BV(USB2_PIN));
+			currentPump = PUMP_3;
+		    USBP_PORT &= ~(_BV(USBP_PIN));                //0 1 -> pump 3
+		    USBM_PORT |= (_BV(USBM_PIN));
 			break;
 	}
 }
