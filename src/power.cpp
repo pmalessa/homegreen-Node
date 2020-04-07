@@ -36,7 +36,8 @@ void Power::DeInit()
 
 bool Power::isAdcStable()
 {
-	return (adcStable == 10);	//ADC is stable once 10 measurements are buffered
+	return 1;
+	//return (adcStable == 10);	//ADC is stable once 10 measurements are buffered
 }
 
 bool Power::isPowerConnected()	//check if the 5V Pin is high
@@ -53,18 +54,6 @@ bool Power::isPowerConnected()	//check if the 5V Pin is high
 	{
 		return false;
 	}
-	
-	/*
-	uint16_t curVol = adc2vol();
-	if(curVol > POWER_HIGH_THRESHOLD)	//higher bound
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
-	*/
 }
 
 bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
@@ -78,27 +67,16 @@ bool Power::isPowerLost()	//return if last measured CurVol lower than Threshold
 	{
 		return true;
 	}
-	/*
-	uint16_t curVol = adc2vol();
-	if(curVol < POWER_LOW_THRESHOLD)	//lower bound
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
-	*/
 }
 
 bool Power::isPowerLow()	//return if last measured CurVol lower than Threshold
 {
-	uint16_t curVol = adc2vol();
-	if(curVol < LOWVOLTAGE)
-	{
-		return 1;
-	}
-	else
+	// uint16_t curVol = adc2vol();
+	// if(curVol < LOWVOLTAGE)
+	// {
+	// 	return 1;
+	// }
+	// else
 	{
 		return 0;
 	}
@@ -130,12 +108,12 @@ void Power::setLoad(uint8_t state)
 
 void Power::run()
 {
-	if(powerTimer.isTimeUp())	//every 10ms
-	{
-		if(adcStable < 10)	//count adcStable till 10
-		{
-			adcStable++;
-		}
-		currentCapVoltage = (uint16_t) (ALPHA * ADC + (1-ALPHA) * currentCapVoltage);	//EWMA Filtering of ADC Input
-	}
+	// if(powerTimer.isTimeUp())	//every 10ms
+	// {
+	// 	if(adcStable < 10)	//count adcStable till 10
+	// 	{
+	// 		adcStable++;
+	// 	}
+	// 	currentCapVoltage = (uint16_t) (ALPHA * ADC + (1-ALPHA) * currentCapVoltage);	//EWMA Filtering of ADC Input
+	// }
 }

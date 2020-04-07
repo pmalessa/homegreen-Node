@@ -54,7 +54,9 @@ void Button::clearOtherThan(button_t but)
 
 bool Button::isAnyPressed()
 {
-	return anyPressed;
+	uint8_t tmp = anyPressed;
+	anyPressed = false;
+	return tmp;
 }
 
 void Button::run() 

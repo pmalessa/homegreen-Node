@@ -12,7 +12,6 @@ extern "C"
   #include "driver/light_ws2812.h"
 }
 
-
 typedef enum{
 	STATE_BOOT,
 	STATE_DISPLAY,
@@ -23,8 +22,10 @@ typedef enum{
 	STATE_MAN_PUMPING
 }state_t;
 state_t state = STATE_BOOT;
+
 uint8_t first = 1;
 uint8_t wakeupTimeout = 0;
+uint8_t wakeReason = 0;
 volatile uint8_t wdt_interrupt = 0;
 struct cRGB led[1];
 DeltaTimer buttonStepTimer;
@@ -32,12 +33,11 @@ DeltaTimer buttonStepTimer;
 ISR(WDT_vect) {
 	wdt_interrupt = 1;
 	Data::decCountdown(8);
-	led[0].r = 0x10;
+	led[0].g = 0x10;
 	ws2812_setleds(led,1);
 	_delay_ms(20);
-	led[0].r = 0x00;
+	led[0].g = 0x00;
 	ws2812_setleds(led,1);
-
 }
 
 void switchTo(state_t newstate)
@@ -61,7 +61,25 @@ int main (void) {
 	//watchdog init
 	cli();
 	uint8_t reset_flag = MCUSR;
-	UNUSED(reset_flag);
+	if(reset_flag & (1<< PORF))
+	{
+		//Power on Reset
+	}
+	else if(reset_flag & (1<< BORF))
+	{
+		//BrownOut Reset - no real reset, switch to charging
+		state = STATE_WAKEUP;
+		wakeReason = 2; //Charging
+	}
+	else if(reset_flag & (1<< EXTRF))
+	{
+		//External Reset
+	}
+	else if(reset_flag & (1<< WDRF))
+	{
+		//Watchdog Reset
+	}
+
 	MCUSR = 0;
 	MCUSR &= ~(1<<WDRF);								//unlock step 1
 	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
@@ -111,7 +129,6 @@ void state_machine()
 	static digit_t curdigit = DIGIT_INTERVAL;
 	static uint32_t prev_countdown = 0;
 	static Button::button_press press;
-	static uint8_t wakeReason = 0;
 	static uint8_t currentPump = 0;
 	static bool hubConnected = false;
 
@@ -145,16 +162,16 @@ void state_machine()
 				}
 				else							//if no PB connected
 				{
-					led[0].b = 0x10;
+					led[0].r = 0x10;
 					ws2812_setleds(led,1);
 					_delay_ms(100);
-					led[0].b = 0x00;
+					led[0].r = 0x00;
 					ws2812_setleds(led,1);
 					_delay_ms(100);
-					led[0].b = 0x10;
+					led[0].r = 0x10;
 					ws2812_setleds(led,1);
 					_delay_ms(100);
-					led[0].b = 0x00;
+					led[0].r = 0x00;
 					ws2812_setleds(led,1);
 					_delay_ms(100);
 					switchTo(STATE_SLEEP);		//-> Sleep State
@@ -256,7 +273,6 @@ void state_machine()
 				Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION1));
 				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
 				prev_countdown = 0;
-				currentPump = 0;
 			}
 			if(Power::isPowerLost()) //if power lost
 			{
@@ -592,24 +608,13 @@ void state_machine()
 					switchTo(STATE_DISPLAY);
 					break;
 				}
-				
 			}
-			if(hubConnected)
-			{
-				led[0].g = 0x10;
-				ws2812_setleds(led,1);
-				_delay_ms(20);
-				led[0].g = 0x00;
-				ws2812_setleds(led,1);
-			}
-			else
-			{
-				led[0].b = 0x10;
-				ws2812_setleds(led,1);
-				_delay_ms(20);
-				led[0].b = 0x00;
-				ws2812_setleds(led,1);
-			}
+			led[0].g = 0x10;
+			ws2812_setleds(led,1);
+			_delay_ms(20);
+			led[0].g = 0x00;
+			ws2812_setleds(led,1);
+
 			press = Button::isPressed(Button::BUTTON_MAN);
 			if(press == Button::BUTTON_LONG_PRESS)				//if Button MAN long pressed, disable Pump
 			{
@@ -619,6 +624,10 @@ void state_machine()
 				Display::SetByte(4,0x71);	//F
 				Display::SetByte(5,0x71);	//F
 				Pump::Stop();
+				if(state == STATE_PUMPING)	//if it was the ordinary Pump cycle, reset countdown
+				{
+					Data::resetCountdown();
+				}
 				fade();
 				switchTo(STATE_DISPLAY);					//switch to Display State
 				break;
