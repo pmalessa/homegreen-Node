@@ -15,9 +15,10 @@ class Power
 {
 public:
     static void Init();
-    static void DeInit();
+    static void Wakeup();
+    static void Sleep();
     static bool isPowerConnected();
-    static bool isPowerLow();
+    static bool isCapLow();
     static void setInputPower(uint8_t state);
     static void setLoad(uint8_t state);
     static bool isAdcStable();
@@ -32,8 +33,6 @@ private:
 
     #define CHANNEL_1V1	0b1110
     #define LOWVOLTAGE 2800	//Low Voltage Threshold in mV
-    #define POWER_LOW_THRESHOLD 3400
-    #define POWER_HIGH_THRESHOLD 3700
 
     #define ALPHA 0.7    //alpha value for EWMA Filtering
 

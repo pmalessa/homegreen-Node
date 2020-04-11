@@ -97,7 +97,15 @@ int main (void) {
 	Power::Init();
 	Data::Init();
 	Display::Init();
+
+	I2C_SCL_DDR |= (1 << I2C_SCL_PIN); //I2C Pin as Output while Temp Sensor unused
+	I2C_SDA_DDR |= (1 << I2C_SDA_PIN); 
+
+	I2C_SCL_PORT &= ~(1 << I2C_SCL_PIN);	//Set Low
+	I2C_SDA_PORT &= ~(1 << I2C_SDA_PIN);
+
 //	temp_init();
+
 
 	buttonStepTimer.setTimeStep(100); //set step of long press
 
@@ -142,7 +150,7 @@ void state_machine()
 			{
 				first = 0;
 				Power::setInputPower(1);
-				_delay_ms(100);
+				_delay_ms(200);
 				if(Power::isPowerConnected())	//if PB connected
 				{
 					led[0].g = 0x10;
@@ -220,7 +228,7 @@ void state_machine()
 				switchTo(STATE_PUMPING);
 				break;
 			}
-			if(Power::isPowerLost()) 	//if power lost
+			if(!Power::isPowerConnected()) 	//if power lost
 			{
 				switchTo(STATE_SLEEP);
 				break;
@@ -274,7 +282,7 @@ void state_machine()
 				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
 				prev_countdown = 0;
 			}
-			if(Power::isPowerLost()) //if power lost
+			if(!Power::isPowerConnected()) //if power lost
 			{
 				Data::Save();
 				switchTo(STATE_SLEEP);
@@ -432,6 +440,7 @@ void state_machine()
 			if(press == Button::BUTTON_LONG_PRESS)								//if long Press
 			{
 				Display::ResetTimeout();
+				Display::DisableBlinking();
 				Data::setDefault();	//reset EEPROM
 				Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION1));
 				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
@@ -457,8 +466,7 @@ void state_machine()
 				Display::DeInit();					//DeInit Display
 				Power::setInputPower(0);			//disable Powerbank
 			}
-			DEBUG1_PORT &= ~(1 << DEBUG1_PIN);		//Turn off Debug Port
-			//PRR |= (1 << PRADC);
+			Power::Sleep();
 		    set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//Sleep mode: only wdt and pin interrupt
 		    cli();									//disable interrupts
 			sleep_enable();							//enable sleep
@@ -468,7 +476,7 @@ void state_machine()
 			/*zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz*/
 			//waked up
 			sleep_disable();						//disable sleep
-			//PRR &= ~(1 << PRADC);
+			Power::Wakeup();
 			sei();									//enable interrupts
 
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
@@ -479,7 +487,7 @@ void state_machine()
 					wakeReason = 0; //Reason Wakeup for Countdown
 					switchTo(STATE_WAKEUP);
 				}
-				if(Power::isPowerLow())
+				if(Power::isCapLow())
 				{
 					wakeReason = 1; //Reason Wakeup for Charging
 					switchTo(STATE_WAKEUP);
@@ -512,7 +520,6 @@ void state_machine()
 				_delay_ms(150);
 				Power::setLoad(0);
 				_delay_ms(150);
-				DEBUG1_PORT |= (1 << DEBUG1_PIN);	//Set Debug Pin
 				//successfully woken up
 				Display::Init();
 				switch (wakeReason)
@@ -666,7 +673,7 @@ void state_machine()
 			{
 				Pump::Decrement();
 			}
-			if(Power::isPowerLost()) //if power lost
+			if(!Power::isPowerConnected()) //if power lost
 			{
 				Pump::Stop();
 				Display::StopAnimation();

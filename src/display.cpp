@@ -74,7 +74,6 @@ void Display::DeInit()
 {
 	isInitialized = false;
 	Clear();
-	//display_update();
 	tm1637_deInit();
 }
 

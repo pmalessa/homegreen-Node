@@ -42,6 +42,13 @@
 #define TOUCH_PWR_PORT PORTA
 #define TOUCH_PWR_PIN PA2
 
+#define I2C_SCL_DDR DDRC
+#define I2C_SCL_PORT PORTC
+#define I2C_SCL_PIN PC5
+
+#define I2C_SDA_DDR DDRC
+#define I2C_SDA_PORT PORTC
+#define I2C_SDA_PIN PC4
 
 //#define SLEEP_INTERVAL_S 4	//4000ms = 4s
 #define DISPLAY_TIMEOUT_S 5 //5sec

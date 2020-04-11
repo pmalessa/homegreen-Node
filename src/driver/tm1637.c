@@ -141,8 +141,8 @@ void tm1637_Init()
 
 void tm1637_deInit()
 {
-//	TM_CLK_LOW();
-//	TM_DAT_LOW();
+	TM_CLK_LOW();
+	TM_DAT_LOW();
 }
 
 void tm1637_setByte(uint8_t position, uint8_t b)
