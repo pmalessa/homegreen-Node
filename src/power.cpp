@@ -17,12 +17,20 @@ void Power::Init() {
 
 	powerTimer.setTimeStep(10); //10 ms
 
+	//Init 1kHz Clock Timer, use Timer 1
+	TCCR1A = 0x00; TCCR1B = 0x00; TCCR1C = 0x00;		//Register zuruecksetzen
+	TCCR1A |= (1 << COM1A0);							//Toggle OC1A / CTC Mode OCR1A / Prescaler 64
+	TCCR1B |= (1 << WGM12) | (1 << CS11) | (1 << CS10);
+	OCR1A = 125 - 1;									// 1000000 / 8 / 1000 = 125 -> 1000Hz
+	TIMSK1 = 0;											//No Interrupts
+	GTCCR &= ~(1 << TSM);								//Timer starten
+
 	Power::Wakeup();
 }
 
 void Power::Wakeup()
 {
-	//enable ADC in PRR
+	//PRR &= ~(1 << PRADC);
     ADCSRA = _BV(ADEN) | _BV(ADATE)| _BV(ADPS1) | _BV(ADPS0);	//Enable, Auto Trigger, DIV8
     ADCSRB = 0;													//Free running mode
 	ADMUX = CHANNEL_1V1;										//measuring 1.1V Reference Voltage
@@ -30,8 +38,6 @@ void Power::Wakeup()
 	ADCSRA |= _BV(ADSC);										//start conversion
 
 	currentCapVoltage = ADC;	//scrap measurement
-	_delay_ms(10);
-	currentCapVoltage = ADC;
 
 	adcStable = false;
 }
@@ -39,7 +45,7 @@ void Power::Wakeup()
 void Power::Sleep()
 {
 	ADCSRA = 0;	//disable ADC
-	//disable ADC in PRR
+	//PRR |= (1 << PRADC);
 }
 
 bool Power::isAdcStable()
@@ -79,10 +85,14 @@ void Power::setInputPower(uint8_t state)
 	if (state == 1)
 	{
 		PWR_IN_PORT &= ~(_BV(PWR_IN_PIN)); 		//turn on PB
+		TCCR1A &= ~(1 << COM1A0);				//disable Clock Signal
+		//PRR |= (1 << PRTIM1);
 	}
 	else
 	{
 		PWR_IN_PORT |= (_BV(PWR_IN_PIN));	//turn off PB
+		//PRR &= ~(1 << PRTIM1);
+		TCCR1A |= (1 << COM1A0);			//enable Clock Signal
 	}
 }
 

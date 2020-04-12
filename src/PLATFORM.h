@@ -34,10 +34,6 @@
 #define PWR_5V_PIN PA0
 #define PWR_5V_PINREG PINA
 
-#define LED_DDR DDRC
-#define LED_PORT PORTC
-#define LED_PIN PC2
-
 #define TOUCH_PWR_DDR DDRA
 #define TOUCH_PWR_PORT PORTA
 #define TOUCH_PWR_PIN PA2

@@ -13,6 +13,18 @@ void Timer::Init()
 	GTCCR &= ~(1 << TSM);					//Timer starten
 }
 
+void Timer::Sleep()
+{
+	TIMSK0 = 0; //disable Timer0 interrupts
+	//PRR |= (1 << PRTIM0);
+}
+
+void Timer::Wakeup()
+{
+	//PRR &= ~(1 << PRTIM0);
+	TIMSK0 = (1<<OCIE0A); //enable Timer0 Compare Interrupt
+}
+
 uint32_t Timer::getMillis()
 {
 	return millis;

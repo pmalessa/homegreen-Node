@@ -7,10 +7,18 @@
 #include "data.hpp"
 #include "temp.hpp"
 #include "button.hpp"
-extern "C"
-{
-  #include "driver/light_ws2812.h"
-}
+#include "Led.hpp"
+
+/**
+ * Homegreen Node Basic Firmware
+ * -----------------------------
+ * Power Consumption while Sleep:
+ * - CPU in IDLE Mode, 1MHz Clock still driving Timer and IO
+ * - Timer0 off (maybe using for 1sec wakeup later as wdt inaccurate?), Timer1 on 1kHz for Voltage Doubler
+ * 
+ **/
+
+
 
 typedef enum{
 	STATE_BOOT,
@@ -27,17 +35,12 @@ uint8_t first = 1;
 uint8_t wakeupTimeout = 0;
 uint8_t wakeReason = 0;
 volatile uint8_t wdt_interrupt = 0;
-struct cRGB led[1];
 DeltaTimer buttonStepTimer;
 
 ISR(WDT_vect) {
 	wdt_interrupt = 1;
 	Data::decCountdown(8);
-	led[0].g = 0x10;
-	ws2812_setleds(led,1);
-	_delay_ms(20);
-	led[0].g = 0x00;
-	ws2812_setleds(led,1);
+	Led::Blink(1,20);
 }
 
 void switchTo(state_t newstate)
@@ -55,7 +58,7 @@ void anypress_callback()	//called if any Button pressed or released
 	Display::ResetTimeout();
 }
 
-//m��p 1 otterdamoo <3
+//mööp 1 otterdamoo <3
 
 int main (void) {
 	//watchdog init
@@ -85,11 +88,11 @@ int main (void) {
 	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
 	WDTCSR = (1 << WDIE) | (1 << WDP3) | (1 << WDP0); 	//Set to Interrupt Mode and "every 8 s"
 
-	led[0].r = 0;led[0].g = 0;led[0].b = 0;
 
 	//power saving
-//	PRR |= (1 << PRTWI) | (1 << PRTIM1);
+	PRR |= (1 << PRTWI);
 
+	Led::Init();
 	Timer::Init();
 	Button::Init();
 	Button::SetCallback(&anypress_callback);
@@ -153,35 +156,13 @@ void state_machine()
 				_delay_ms(200);
 				if(Power::isPowerConnected())	//if PB connected
 				{
-					led[0].g = 0x10;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].g = 0x00;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].g = 0x10;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].g = 0x00;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
+					Led::Blink(2,100);
 					Display::Init();
 					Display::StartAnimation(Display::ANIMATION_BOOT);
 				}
 				else							//if no PB connected
 				{
-					led[0].r = 0x10;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].r = 0x00;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].r = 0x10;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].r = 0x00;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
+					Led::Blink(3,100);
 					switchTo(STATE_SLEEP);		//-> Sleep State
 					break;
 				}
@@ -467,7 +448,8 @@ void state_machine()
 				Power::setInputPower(0);			//disable Powerbank
 			}
 			Power::Sleep();
-		    set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//Sleep mode: only wdt and pin interrupt
+			Timer::Sleep();
+		    set_sleep_mode(SLEEP_MODE_IDLE);	//Sleep mode Idle: using Timer Clock for Voltage Doubler
 		    cli();									//disable interrupts
 			sleep_enable();							//enable sleep
 //			sleep_bod_disable();					//disable BOD for power save
@@ -476,6 +458,7 @@ void state_machine()
 			/*zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz*/
 			//waked up
 			sleep_disable();						//disable sleep
+			Timer::Wakeup();
 			Power::Wakeup();
 			sei();									//enable interrupts
 
@@ -616,11 +599,7 @@ void state_machine()
 					break;
 				}
 			}
-			led[0].g = 0x10;
-			ws2812_setleds(led,1);
-			_delay_ms(20);
-			led[0].g = 0x00;
-			ws2812_setleds(led,1);
+			Led::Blink(1,20);
 
 			press = Button::isPressed(Button::BUTTON_MAN);
 			if(press == Button::BUTTON_LONG_PRESS)				//if Button MAN long pressed, disable Pump
