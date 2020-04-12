@@ -7,7 +7,7 @@ void Timer::Init()
 {
 	//Init 1ms Timer, use Timer 0
 	TCCR0A = 0x00;							//Register zuruecksetzen
-	TCCR0A |= (1 << CTC0) | (1 << CS01)| (1 << CS00);	//CTC Mode / Prescaler 64
+	TCCR0A |= (1 << CTC0) | (1 << CS01);	//CTC Mode / Prescaler 8
 	OCR0A = 125 - 1;						// 1000000 / 8 / 1000 = 125 -> 1000Hz
 	TIMSK0 = (1<<OCIE0A);					//Enable Compare Interrupt
 	GTCCR &= ~(1 << TSM);					//Timer starten
