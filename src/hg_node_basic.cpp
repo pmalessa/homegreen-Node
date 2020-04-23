@@ -153,16 +153,15 @@ void state_machine()
 			{
 				first = 0;
 				Power::setInputPower(1);
-				_delay_ms(200);
+				Led::Blink(2,100);
 				if(Power::isPowerConnected())	//if PB connected
 				{
-					Led::Blink(2,100);
 					Display::Init();
 					Display::StartAnimation(Display::ANIMATION_BOOT);
 				}
 				else							//if no PB connected
 				{
-					Led::Blink(3,100);
+					Led::Blink(1,100);
 					switchTo(STATE_SLEEP);		//-> Sleep State
 					break;
 				}
@@ -495,14 +494,10 @@ void state_machine()
 			{
 				first = 0;
 				Power::setInputPower(1);
-				wakeupTimeout = 20;	//try for 4 seconds
+				wakeupTimeout = 20;	//try for 20 times
 			}
 			if(Power::isPowerConnected())
 			{
-				Power::setLoad(1);
-				_delay_ms(150);
-				Power::setLoad(0);
-				_delay_ms(150);
 				//successfully woken up
 				Display::Init();
 				switch (wakeReason)
@@ -545,9 +540,9 @@ void state_machine()
 				{
 					wakeupTimeout--;
 					Power::setLoad(1);
-					_delay_ms(200);
+					_delay_ms(50);
 					Power::setLoad(0);
-					_delay_ms(200);
+					_delay_ms(50);
 				}
 				else
 				{

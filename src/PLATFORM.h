@@ -46,6 +46,14 @@
 #define I2C_SDA_PORT PORTC
 #define I2C_SDA_PIN PC4
 
+#define PWR_CLOCK_DDR DDRB
+#define PWR_CLOCK_PORT PORTB
+#define PWR_CLOCK_PIN PB1
+
+#define LED_DDR DDRC
+#define LED_PORT PORTC
+#define LED_PIN PC2
+
 //#define SLEEP_INTERVAL_S 4	//4000ms = 4s
 #define DISPLAY_TIMEOUT_S 5 //5sec
 

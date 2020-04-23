@@ -15,6 +15,8 @@ void Power::Init() {
 
     PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));						//turn off load
 
+	PWR_CLOCK_DDR |=_BV(PWR_CLOCK_PIN);
+
 	powerTimer.setTimeStep(10); //10 ms
 
 	//Init 1kHz Clock Timer, use Timer 1
@@ -23,8 +25,7 @@ void Power::Init() {
 	TCCR1B |= _BV(WGM12) | _BV(CS11);
 	OCR1A = 125 - 1;									// 1000000 / 8 / 1000 = 125 -> 1000Hz
 	TIMSK1 = 0;											//No Interrupts
-	GTCCR &= ~_BV(TSM);								//Timer starten
-
+	PRR &= ~_BV(PRTIM1);	//dont shut off Timer1
 	Power::Wakeup();
 }
 

@@ -10,12 +10,12 @@ void Led::Blink(uint8_t nr, uint16_t delay)
     for(uint8_t i=0;i<nr;i++)
     {
         On();
-        for (uint16_t j = 0; i < delay; j++)
+        for (uint16_t j = 0; j < delay; j++)
         {
             _delay_ms(1);
         }
         Off();
-        for (uint16_t j = 0; i < delay; j++)
+        for (uint16_t j = 0; j < delay; j++)
         {
             _delay_ms(1);
         }
