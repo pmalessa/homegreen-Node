@@ -271,6 +271,7 @@ void Display::Draw()
 			{
 				state = 0;
 				animationDone = true;
+				break;
 			}
 			for(uint8_t i=0;i<6;i++)
 			{
@@ -288,6 +289,7 @@ void Display::Draw()
 			{
 				state = 0;
 				animationDone = true;
+				break;
 			}
 			switch (toggle) {
 				case 0:
@@ -320,10 +322,11 @@ void Display::Draw()
 			else
 			{
 				speedCounter = 0;
-				if(state > 6)	//done
+				if(state > 5)	//done
 				{
 					state = 0;
 					animationDone = true;
+					break;
 				}
 				switch (toggle) {
 					case 0:
@@ -367,6 +370,7 @@ void Display::Draw()
 				{
 					state = 0;
 					animationDone = true;
+					break;
 				}
 				
 			}

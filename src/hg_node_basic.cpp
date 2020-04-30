@@ -32,7 +32,7 @@ typedef enum{
 state_t state = STATE_BOOT;
 
 uint8_t first = 1;
-uint8_t wakeupTimeout = 0;
+uint8_t loadCounter = 0;
 uint8_t wakeReason = 0;
 volatile uint8_t wdt_interrupt = 0;
 DeltaTimer buttonStepTimer;
@@ -493,12 +493,18 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
+				loadCounter = 12;	//try for 20 times
+				Power::setLoad(1);
+				_delay_ms(50);
+				Power::setLoad(0);
+				_delay_ms(200);
 				Power::setInputPower(1);
-				wakeupTimeout = 20;	//try for 20 times
+				Led::On();
 			}
 			if(Power::isPowerConnected())
 			{
 				//successfully woken up
+				Led::Off();
 				Display::Init();
 				switch (wakeReason)
 				{
@@ -536,16 +542,17 @@ void state_machine()
 			}
 			else
 			{
-				if(wakeupTimeout)
+				if(loadCounter)
 				{
-					wakeupTimeout--;
+					loadCounter--;
 					Power::setLoad(1);
 					_delay_ms(50);
 					Power::setLoad(0);
-					_delay_ms(50);
+					_delay_ms(200);
 				}
 				else
 				{
+					Led::Off();
 					switchTo(STATE_SLEEP);	//unsuccessful, back to sleep, try 1min later?
 				}
 			}
