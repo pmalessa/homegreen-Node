@@ -195,6 +195,11 @@ void Display::SetBrightness(uint8_t val)
 void Display::EnableBlinking(digit_t digit)
 {
 	blinkingEnabled = digit+1;
+	blinkCounter = 6; //switch to off state first
+}
+
+void Display::ResetBlinkCounter()
+{
 	blinkCounter = 0;
 }
 
@@ -239,11 +244,18 @@ void Display::Draw()
 		{
 		case ANIMATION_NONE:	//No Animation, Display or Blink values
 			blinkCounter++;
-			if(blinkCounter > 11)	//blinkCounter 0..5
+			if(blinkCounter > 11)	//blinkCounter 0..11
 			{
 				blinkCounter = 0;
 			}
-			if(blinkingEnabled && blinkCounter > 5)	//Blinking ..5
+			if(blinkingEnabled && blinkCounter > 5)	//On 0..5
+			{
+				for(uint8_t i=0;i<6;i++)
+				{
+					dsend(i,dig[i]);	//send all digits
+				}
+			}
+			else	//Off 6..11
 			{
 				switch (blinkingEnabled) {
 					case 1: //DIGIT_INTERVAL
@@ -272,13 +284,6 @@ void Display::Draw()
 						break;
 					default:
 						break;
-				}
-			}
-			else	//Not Blinking 0..4
-			{
-				for(uint8_t i=0;i<6;i++)
-				{
-					dsend(i,dig[i]);	//send all digits
 				}
 			}
 			break;

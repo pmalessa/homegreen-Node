@@ -234,7 +234,7 @@ void state_machine()
 				switchTo(STATE_SLEEP);
 				break;
 			}
-			if((Button::isPressed(Button::BUTTON_MAN) == Button::BUTTON_LONG_PRESS))	//switch to MAN_PUMPING
+			if(Button::isPressed(Button::BUTTON_MAN) == Button::BUTTON_LONG_PRESS)	//switch to MAN_PUMPING
 			{
 				Display::ResetTimeout();
 				Display::Clear();
@@ -257,9 +257,10 @@ void state_machine()
 				Display::ResetTimeout();
 				if(hubConnected)
 				{
-					currentPump = (currentPump+1)%3;
+					currentPump++;
+					if(currentPump>2)currentPump = 0;	//0..2
 					Display::SetByte(4,0x73);	//P
-					Display::SetByte(5,Display::numToByte(currentPump+1));
+					Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(Data::DATA_DURATION1+currentPump)));
 				}
 			}
@@ -301,12 +302,13 @@ void state_machine()
 			}
 			
 			press = Button::isPressed(Button::BUTTON_PLUS);	//get Button Plus Press
-			if(press == Button::BUTTON_LONG_PRESS)								//if long Press
+			if(press == Button::BUTTON_LONG_PRESS)			//if long Press
 			{
 				if(buttonStepTimer.isTimeUp())
 				{
 					Button::clearOtherThan(Button::BUTTON_PLUS);
 					Display::ResetTimeout();
+					Display::ResetBlinkCounter();
 					switch (curdigit)
 					{
 					case DIGIT_INTERVAL:
@@ -330,6 +332,7 @@ void state_machine()
 			}
 			else if(press == Button::BUTTON_SHORT_PRESS)							//if short press, increment one step
 			{
+				Display::ResetBlinkCounter();
 				switch (curdigit)
 				{
 				case DIGIT_INTERVAL:
@@ -358,6 +361,7 @@ void state_machine()
 				{
 					Button::clearOtherThan(Button::BUTTON_MINUS);
 					Display::ResetTimeout();
+					Display::ResetBlinkCounter();
 					switch (curdigit)
 					{
 					case DIGIT_INTERVAL:
@@ -381,6 +385,7 @@ void state_machine()
 			}
 			else if(press == Button::BUTTON_SHORT_PRESS)							//if short press, decrement one step
 			{
+				Display::ResetBlinkCounter();
 				switch (curdigit)
 				{
 				case DIGIT_INTERVAL:
