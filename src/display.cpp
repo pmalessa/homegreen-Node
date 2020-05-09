@@ -193,11 +193,11 @@ void Display::Draw()
 		{
 		case ANIMATION_NONE:	//No Animation, Display or Blink values
 			blinkCounter++;
-			if(blinkCounter > 5)	//blinkCounter 0..5
+			if(blinkCounter > 11)	//blinkCounter 0..5
 			{
 				blinkCounter = 0;
 			}
-			if(blinkingEnabled && blinkCounter > 4)	//Blinking ..5
+			if(blinkingEnabled && blinkCounter > 5)	//Blinking ..5
 			{
 				switch (blinkingEnabled) {
 					case 1: //DIGIT_INTERVAL

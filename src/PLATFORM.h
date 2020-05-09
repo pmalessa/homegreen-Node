@@ -51,7 +51,7 @@
 #define I2C_SDA_PIN PC4
 
 //#define SLEEP_INTERVAL_S 4	//4000ms = 4s
-#define DISPLAY_TIMEOUT_S 5 //5sec
+#define DISPLAY_TIMEOUT_S 10 //5sec
 
 #define true 1
 #define false 0
