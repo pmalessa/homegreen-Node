@@ -18,6 +18,11 @@ uint32_t Timer::getMillis()
 	return millis;
 }
 
+uint32_t Timer::getCurrentRuntime()	//get current Runtime since last Reset in 0.1 Hours steps
+{
+	return (millis/1000/60/6); //0.1 hours
+}
+
 void Timer::count()
 {
 	millis++;
