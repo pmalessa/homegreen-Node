@@ -128,13 +128,14 @@ void Display::SetNegValue(uint8_t position, int16_t val)
 		val = -999;
 	}
 
-	if(val > 0)
+	if(val < 0)
 	{
-		SetByte(position,0x00);	//Positive, nothing
+		SetByte(position,0x40);	//Negative, minus
+		val = abs(val);
 	}
 	else
 	{
-		SetByte(position,0x40);	//Negative, minus
+		SetByte(position,0x00);	//Positive, nothing
 	}
 	
 	SetByte(position+1,numToByteArray[val/100]);
@@ -248,14 +249,7 @@ void Display::Draw()
 			{
 				blinkCounter = 0;
 			}
-			if(blinkingEnabled && blinkCounter > 5)	//On 0..5
-			{
-				for(uint8_t i=0;i<6;i++)
-				{
-					dsend(i,dig[i]);	//send all digits
-				}
-			}
-			else	//Off 6..11
+			if(blinkingEnabled && blinkCounter > 5)	//Off 0..5
 			{
 				switch (blinkingEnabled) {
 					case 1: //DIGIT_INTERVAL
@@ -284,6 +278,13 @@ void Display::Draw()
 						break;
 					default:
 						break;
+				}
+			}
+			else	//On 6..11
+			{
+				for(uint8_t i=0;i<6;i++)
+				{
+					dsend(i,dig[i]);	//send all digits
 				}
 			}
 			break;

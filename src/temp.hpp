@@ -24,7 +24,7 @@ public:
     static void Sleep();
     static void Wakeup();
     static void run();
-    static float getFloat(uint16_t val);
+    static float getFloat(int16_t val);
     static uint16_t getTempAdjustFactor();
 
 private:

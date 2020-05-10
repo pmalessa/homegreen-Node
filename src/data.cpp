@@ -9,6 +9,7 @@
 #include "avr/eeprom.h"
 
 uint16_t Data::data[DATA_SIZE] = {0};
+int16_t Data::tempdata[TEMPDATA_SIZE] = {0};
 uint32_t Data::countdown = 0;
 
 void Data::Init()
@@ -21,7 +22,8 @@ void Data::Init()
 	data[DATA_DURATION1] = eeprom_read_word((uint16_t *)ADR_DURATION1);
 	data[DATA_DURATION2] = eeprom_read_word((uint16_t *)ADR_DURATION2);
 	data[DATA_DURATION3] = eeprom_read_word((uint16_t *)ADR_DURATION3);
-	data[DATA_SETUP_TEMP] = eeprom_read_word((uint16_t *)ADR_SETUP_TEMP);
+	data[DATA_TOTAL_RUNTIME] = eeprom_read_word((uint16_t *)ADR_TOTAL_RUNTIME);
+	tempdata[DATA_SETUP_TEMP] = eeprom_read_word((uint16_t *)ADR_SETUP_TEMP);
 	resetCountdown();
 }
 
@@ -54,42 +56,30 @@ void Data::Decrement(data_type_t data_type)
 
 void Data::Set(data_type_t data_type, uint16_t val)
 {
-	switch (data_type) {
-		case DATA_INTERVAL:
-		case DATA_DURATION1:
-		case DATA_DURATION2:
-		case DATA_DURATION3:
-			if(val > 0 && val <= 990)
-			{
-				data[data_type] = val;
-			}
-			break;
-		case DATA_SETUP_TEMP:
-		case DATA_CURRENT_TEMP:
-			data[data_type] = val;
-			break;
-		default:
-			break;
+	if(data_type == DATA_TOTAL_RUNTIME)
+	{
+		data[data_type] = val;
+		return;
 	}
+	if(val > 0 && val <= 990)
+	{
+		data[data_type] = val;
+	}
+}
+
+void Data::SetTemp(temp_type_t temp_type, int16_t val)
+{
+	tempdata[temp_type] = val;
+}
+
+int16_t Data::GetTemp(temp_type_t temp_type)
+{
+	return tempdata[temp_type];
 }
 
 uint16_t Data::Get(data_type_t data_type)
 {
-	switch (data_type) {
-		case DATA_INTERVAL:
-		case DATA_DURATION1:
-		case DATA_DURATION2:
-		case DATA_DURATION3:
-			return data[data_type];
-			break;
-		case DATA_SETUP_TEMP:
-		case DATA_CURRENT_TEMP:
-			return data[data_type];
-			break;
-		default:
-			return 0;
-			break;
-	}
+	return data[data_type];
 }
 
 void Data::decCountdown(uint8_t sec)
@@ -127,7 +117,9 @@ void Data::Save()
 	eeprom_write_word((uint16_t *)ADR_DURATION1, data[DATA_DURATION1]);		//save duration
 	eeprom_write_word((uint16_t *)ADR_DURATION2, data[DATA_DURATION2]);		//save duration
 	eeprom_write_word((uint16_t *)ADR_DURATION3, data[DATA_DURATION3]);		//save duration
-	eeprom_write_word((uint16_t *)ADR_SETUP_TEMP, data[DATA_SETUP_TEMP]);	//save setup temp
+	eeprom_write_word((uint16_t *)ADR_TOTAL_RUNTIME, data[DATA_TOTAL_RUNTIME]);		//save total runtime
+	eeprom_write_word((uint16_t *)ADR_SETUP_TEMP, tempdata[DATA_SETUP_TEMP]);	//save setup temp
+	//create CRC
 	_delay_ms(10);
 	sei();
 }
@@ -138,7 +130,7 @@ void Data::setDefault()
 	Set(DATA_DURATION1,DATA_DURATION1_DEFAULT);
 	Set(DATA_DURATION2,DATA_DURATION2_DEFAULT);
 	Set(DATA_DURATION3,DATA_DURATION3_DEFAULT);
-	Set(DATA_SETUP_TEMP,DATA_SETUP_TEMP_DEFAULT);
+	SetTemp(DATA_SETUP_TEMP,DATA_SETUP_TEMP_DEFAULT);
 	Save();
 	eeprom_write_dword((uint32_t *)ADR_INIT_CONST, DATA_INIT_CONST);	//set init constant
 }
