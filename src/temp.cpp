@@ -7,7 +7,24 @@
 
 #include "temp.hpp"
 
+DeltaTimer Temp::tempTimer;
+
 void Temp::Init()
+{
+	i2c_init();
+	tempTimer.setTimeStep(1000);
+}
+
+void Temp::Sleep()
+{
+	I2C_SCL_DDR |= (1 << I2C_SCL_PIN); //I2C Pin as Output while Temp Sensor unused
+	I2C_SDA_DDR |= (1 << I2C_SDA_PIN); 
+
+	I2C_SCL_PORT &= ~(1 << I2C_SCL_PIN);	//Set Low
+	I2C_SDA_PORT &= ~(1 << I2C_SDA_PIN);
+}
+
+void Temp::Wakeup()
 {
 	i2c_init();
 }
@@ -18,12 +35,15 @@ float Temp::getFloat(uint16_t val)
 }
 
 //call periodically to update current temp
-void Temp::updateTemp()
+void Temp::run()
 {
-	uint16_t result;
-	if (read16bitRegister(LM75A_REGISTER_TEMP, &result) == true)	//if successful
+	static uint16_t result;
+	if(tempTimer.isTimeUp())
 	{
-		Data::Set(Data::DATA_CURRENT_TEMP,(result >> 7)*5); //turn into 0.1 Degree resolution -> 22.5 Deg => 225
+		if (read16bitRegister(LM75A_REGISTER_TEMP, &result) == true)	//if successful
+		{
+			Data::Set(Data::DATA_CURRENT_TEMP,(int16_t)(result >> 7)*5); //turn into 0.1 Degree resolution -> 22.5 Deg => 225
+		}
 	}
 }
 

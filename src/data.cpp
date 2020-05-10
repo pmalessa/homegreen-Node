@@ -21,6 +21,7 @@ void Data::Init()
 	data[DATA_DURATION1] = eeprom_read_word((uint16_t *)ADR_DURATION1);
 	data[DATA_DURATION2] = eeprom_read_word((uint16_t *)ADR_DURATION2);
 	data[DATA_DURATION3] = eeprom_read_word((uint16_t *)ADR_DURATION3);
+	data[DATA_SETUP_TEMP] = eeprom_read_word((uint16_t *)ADR_SETUP_TEMP);
 	resetCountdown();
 }
 

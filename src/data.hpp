@@ -44,14 +44,14 @@ private:
 		ADR_DURATION3 = 0x0A,
 		ADR_TIME_COUNTER = 0x0C,
 		ADR_SETUP_TEMP = 0x10,
-		ADR_CURRENT_TEMP = 0x14,
+		ADR_CURRENT_TEMP = 0x12,
 	};
 	#define DATA_INIT_CONST 0xF00DBABE
 	#define DATA_INTERVAL_DEFAULT  120		//1..990 = 0.1..99.0
 	#define DATA_DURATION1_DEFAULT  20		//1..990 = 0.1..99.0
 	#define DATA_DURATION2_DEFAULT  30		//1..990 = 0.1..99.0
 	#define DATA_DURATION3_DEFAULT  10		//1..990 = 0.1..99.0
-	#define DATA_SETUP_TEMP_DEFAULT 20		//20*0.5 deg C = 10 deg C
+	#define DATA_SETUP_TEMP_DEFAULT 200		//200*0.1 deg C = 20 deg C
 
 	static uint16_t data[DATA_SIZE];
 	static uint32_t countdown;

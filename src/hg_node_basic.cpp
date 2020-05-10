@@ -98,14 +98,7 @@ int main (void) {
 	Power::Init();
 	Data::Init();
 	Display::Init();
-
-	I2C_SCL_DDR |= (1 << I2C_SCL_PIN); //I2C Pin as Output while Temp Sensor unused
-	I2C_SDA_DDR |= (1 << I2C_SDA_PIN); 
-
-	I2C_SCL_PORT &= ~(1 << I2C_SCL_PIN);	//Set Low
-	I2C_SDA_PORT &= ~(1 << I2C_SDA_PIN);
-
-//	temp_init();
+	Temp::Init();
 
 
 	buttonStepTimer.setTimeStep(100); //set step of long press
@@ -119,6 +112,7 @@ int main (void) {
 		Power::run();
 		Button::run();
 		Pump::run();
+		Temp::run();
 		_delay_ms(10);
 	}
 }
@@ -684,7 +678,6 @@ void state_machine()
 
 		case STATE_INFO:
 			static uint8_t infoState = 0;
-			static int16_t curtemp = 234;//get temp
 			if(first)
 			{
 				first=0;
@@ -721,7 +714,7 @@ void state_machine()
 			{
 			case 0:	//Temp
 				Display::SetByte(0,0x78);	//small t
-				Display::SetNegValue(1,curtemp);
+				Display::SetNegValue(1,(int16_t)Data::Get(Data::DATA_CURRENT_TEMP));
 				break;
 			case 1: //Build Date
 				//Build Date
