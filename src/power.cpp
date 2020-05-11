@@ -7,15 +7,14 @@ uint8_t Power::adcStable = 0;
 DeltaTimer Power::powerTimer;
 
 void Power::Init() {
-    
-	PWR_IN_DDR |= _BV(PWR_IN_PIN);
-    PWR_LOAD_DDR |= _BV(PWR_LOAD_PIN);
-    PWR_5V_DDR &= ~(_BV(PWR_5V_PIN)); 							//digital input
-	PWR_5V_PORT &= ~(_BV(PWR_5V_PIN));							//turn off internal pullup
+	EN_PB_DDR |= _BV(EN_PB_PIN);
+    EN_LOAD_DDR |= _BV(EN_LOAD_PIN);
+    CHK_5V_DDR &= ~(_BV(CHK_5V_PIN)); 							//digital input
+	CHK_5V_PORT &= ~(_BV(CHK_5V_PIN));							//turn off internal pullup
 
-    PWR_LOAD_PORT &= ~(_BV(PWR_LOAD_PIN));						//turn off load
+    EN_LOAD_PORT &= ~(_BV(EN_LOAD_PIN));						//turn off load
 
-	PWR_CLOCK_DDR |=_BV(PWR_CLOCK_PIN);
+	EN_CLK_DDR |=_BV(EN_CLK_PIN);	//maybe to remove if bridged
 
 	powerTimer.setTimeStep(10); //10 ms
 
@@ -57,7 +56,7 @@ bool Power::isAdcStable()
 
 bool Power::isPowerConnected()	//check if the 5V Pin is high
 {
-	uint8_t state = PWR_5V_PINREG & _BV(PWR_5V_PIN);	//read 5V Pin
+	uint8_t state = CHK_5V_PINREG & _BV(CHK_5V_PIN);	//read 5V Pin
 	if(state)
 	{
 		return true;
@@ -85,13 +84,13 @@ void Power::setInputPower(uint8_t state)
 {
 	if (state == 1)
 	{
-		PWR_IN_PORT &= ~_BV(PWR_IN_PIN); 		//turn on PB
+		EN_PB_PORT &= ~_BV(EN_PB_PIN); 		//turn on PB
 		TCCR1A &= ~_BV(COM1A0);				//disable Clock Signal
 		//PRR |= _BV(PRTIM1);
 	}
 	else
 	{
-		PWR_IN_PORT |= _BV(PWR_IN_PIN);	//turn off PB
+		EN_PB_PORT |= _BV(EN_PB_PIN);	//turn off PB
 		//PRR &= ~_BV(PRTIM1);
 		TCCR1A |= _BV(COM1A0);			//enable Clock Signal
 	}
@@ -101,11 +100,11 @@ void Power::setLoad(uint8_t state)
 {
 	if(state == 1)
 	{
-		PWR_LOAD_PORT |= _BV(PWR_LOAD_PIN);		//turn on load
+		EN_LOAD_PORT |= _BV(EN_LOAD_PIN);		//turn on load
 	}
 	else
 	{
-		PWR_LOAD_PORT &= ~_BV(PWR_LOAD_PIN);	//turn off load
+		EN_LOAD_PORT &= ~_BV(EN_LOAD_PIN);	//turn off load
 	}
 }
 

@@ -33,17 +33,6 @@
 #include <stdint.h>
 
 // ----------------------------------------------------------------------------
-// PIN / PORT configuration
-// NOTE: All three pins used must be bits on the same PORT register (ex. PORTB)
-// ----------------------------------------------------------------------------
-
-#define TM_OUT          PORTD
-#define TM_IN           PIND
-#define TM_DDR          DDRD
-#define TM_BIT_CLK      _BV(PD6)
-#define TM_BIT_DAT      _BV(PD5)
-
-// ----------------------------------------------------------------------------
 // Functions and parameters
 // ----------------------------------------------------------------------------
 
