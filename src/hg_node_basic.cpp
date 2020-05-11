@@ -27,7 +27,8 @@ typedef enum{
 	STATE_SLEEP,
 	STATE_WAKEUP,
 	STATE_PUMPING,
-	STATE_MAN_PUMPING
+	STATE_MAN_PUMPING,
+	STATE_INFO
 }state_t;
 state_t state = STATE_BOOT;
 
@@ -35,7 +36,7 @@ uint8_t first = 1;
 uint8_t loadCounter = 0;
 uint8_t wakeReason = 0;
 volatile uint8_t wdt_interrupt = 0;
-DeltaTimer buttonStepTimer;
+DeltaTimer buttonStepTimer, runtimeTimer;
 
 ISR(WDT_vect) {
 	wdt_interrupt = 1;
@@ -100,17 +101,11 @@ int main (void) {
 	Power::Init();
 	Data::Init();
 	Display::Init();
-
-	I2C_SCL_DDR |= (1 << I2C_SCL_PIN); //I2C Pin as Output while Temp Sensor unused
-	I2C_SDA_DDR |= (1 << I2C_SDA_PIN); 
-
-	I2C_SCL_PORT &= ~(1 << I2C_SCL_PIN);	//Set Low
-	I2C_SDA_PORT &= ~(1 << I2C_SDA_PIN);
-
-//	temp_init();
+	Temp::Init();
 
 
 	buttonStepTimer.setTimeStep(100); //set step of long press
+	runtimeTimer.setTimeStep(86400000); //24h, 1 day
 
 	sei();
 
@@ -121,6 +116,12 @@ int main (void) {
 		Power::run();
 		Button::run();
 		Pump::run();
+		Temp::run();
+		if(runtimeTimer.isTimeUp())
+		{
+			Data::Set(Data::DATA_TOTAL_RUNTIME,Data::Get(Data::DATA_TOTAL_RUNTIME)+10);
+			Data::Save();
+		}
 		_delay_ms(10);
 	}
 }
@@ -213,7 +214,7 @@ void state_machine()
 				switchTo(STATE_SLEEP);
 				break;
 			}
-			if((Button::isPressed(Button::BUTTON_MAN) == Button::BUTTON_LONG_PRESS))	//switch to MAN_PUMPING
+			if(Button::isPressed(Button::BUTTON_MAN) == Button::BUTTON_LONG_PRESS)	//switch to MAN_PUMPING
 			{
 				Display::ResetTimeout();
 				Display::Clear();
@@ -236,10 +237,8 @@ void state_machine()
 				Display::ResetTimeout();
 				if(hubConnected)
 				{
-					currentPump = (currentPump+1)%3;
-					Display::SetByte(4,0x73);	//P
-					Display::SetByte(5,Display::numToByte(currentPump+1));
-					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(Data::DATA_DURATION1+currentPump)));
+					currentPump++;
+					if(currentPump>2)currentPump = 0;	//0..2
 				}
 			}
 			break;
@@ -255,12 +254,15 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				Display::ResetTimeout();
 				curdigit = DIGIT_INTERVAL;
-				Display::EnableBlinking(curdigit);
-				Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION1));
-				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
+				currentPump = 0;
 				prev_countdown = 0;
+				Display::ResetTimeout();
+				Display::EnableBlinking(curdigit);
+				Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(Data::DATA_DURATION1+currentPump)));
+				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
+				Display::SetByte(4,0x73);	//P
+				Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 			}
 			if(!Power::isPowerConnected()) //if power lost
 			{
@@ -268,26 +270,14 @@ void state_machine()
 				switchTo(STATE_SLEEP);
 				break;
 			}
-			if(hubConnected)
-			{
-				Display::SetByte(4,0x73); //P
-				Display::SetByte(5,Display::numToByte(currentPump+1));
-			}
-			else
-			{
-				if(Data::getCountdown() != prev_countdown)	//update Countdown
-				{
-					prev_countdown = Data::getCountdown();
-					Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
-				}
-			}
-			press = Button::isPressed(Button::BUTTON_PLUS);						//get Button Plus Press
-			if(press == Button::BUTTON_LONG_PRESS)								//if long Press
+			press = Button::isPressed(Button::BUTTON_PLUS);	//get Button Plus Press
+			if(press == Button::BUTTON_LONG_PRESS)			//if long Press
 			{
 				if(buttonStepTimer.isTimeUp())
 				{
 					Button::clearOtherThan(Button::BUTTON_PLUS);
 					Display::ResetTimeout();
+					Display::ResetBlinkCounter();
 					switch (curdigit)
 					{
 					case DIGIT_INTERVAL:
@@ -299,18 +289,17 @@ void state_machine()
 						Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 						break;					
 					case DIGIT_COUNTDOWN:
-						if(hubConnected)
-						{
-							currentPump++;
-							if(currentPump >2)currentPump=0;
-							Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
-						}
+						currentPump++;
+						if(currentPump >2)currentPump=0; //0..2
+						Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
+						Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 						break;
 					}
 				}
 			}
 			else if(press == Button::BUTTON_SHORT_PRESS)							//if short press, increment one step
 			{
+				Display::ResetBlinkCounter();
 				switch (curdigit)
 				{
 				case DIGIT_INTERVAL:
@@ -322,23 +311,22 @@ void state_machine()
 					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 					break;					
 				case DIGIT_COUNTDOWN:
-					if(hubConnected)
-					{
-						currentPump++;
-						if(currentPump >2)currentPump=0;
-						Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
-					}
+					currentPump++;
+					if(currentPump >2)currentPump=0; //0..2
+					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
+					Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 					break;
 				}
 			}
 			
-			press = Button::isPressed(Button::BUTTON_MINUS);
-			if(press == Button::BUTTON_LONG_PRESS)								//if long Press
+			press = Button::isPressed(Button::BUTTON_MINUS);	//get Button Minus Press
+			if(press == Button::BUTTON_LONG_PRESS)				//if long Press
 			{
 				if(buttonStepTimer.isTimeUp())
 				{
 					Button::clearOtherThan(Button::BUTTON_MINUS);
 					Display::ResetTimeout();
+					Display::ResetBlinkCounter();
 					switch (curdigit)
 					{
 					case DIGIT_INTERVAL:
@@ -350,18 +338,17 @@ void state_machine()
 						Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 						break;					
 					case DIGIT_COUNTDOWN:
-						if(hubConnected)
-						{
-							if(currentPump == 0)currentPump=3;
-							currentPump--;
-							Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
-						}
+						if(currentPump == 0)currentPump=3;
+						currentPump--; //0..2
+						Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
+						Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 						break;
 					}
 				}
 			}
 			else if(press == Button::BUTTON_SHORT_PRESS)							//if short press, decrement one step
 			{
+				Display::ResetBlinkCounter();
 				switch (curdigit)
 				{
 				case DIGIT_INTERVAL:
@@ -373,17 +360,15 @@ void state_machine()
 					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 					break;					
 				case DIGIT_COUNTDOWN:
-					if(hubConnected)
-					{
-						if(currentPump == 0)currentPump=3;
-						currentPump--;
-						Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
-					}
+					if(currentPump == 0)currentPump=3;
+					currentPump--;	//0..2
+					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
+					Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 					break;
 				}
 			}
 			press = Button::isPressed(Button::BUTTON_SET);							//get Set Button Press
-			if(press == Button::BUTTON_LONG_PRESS || Display::IsTimeout())	//Long Press or IDLE timeout, Config done
+			if((press == Button::BUTTON_LONG_PRESS) || Display::IsTimeout())	//Long Press or IDLE timeout, Config done
 			{
 				Data::Save();												//save to EEPROM
 				Display::DisableBlinking();
@@ -413,21 +398,15 @@ void state_machine()
 					curdigit = DIGIT_INTERVAL;
 					break;
 				}
-				Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 				Display::EnableBlinking(curdigit);
 			}
-			press = Button::isPressed(Button::BUTTON_MAN);						//get Button MAN Press
-			if(press == Button::BUTTON_LONG_PRESS)								//if long Press
+			press = Button::isPressed(Button::BUTTON_MAN);							//get Button MAN Press
+			if(press == Button::BUTTON_LONG_PRESS)	//if long Press
 			{
-				Display::ResetTimeout();
 				Display::DisableBlinking();
-				Data::setDefault();	//reset EEPROM
-				Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION1));
-				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
-				Data::resetCountdown();
-				Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
+				Display::ResetTimeout();
 				fade();
-				switchTo(STATE_DISPLAY);
+				switchTo(STATE_INFO);		//switch to State Info
 				break;
 			}
 			break;
@@ -659,6 +638,84 @@ void state_machine()
 				Pump::Stop();
 				Display::StopAnimation();
 				switchTo(STATE_SLEEP);
+				break;
+			}
+			break;
+
+		case STATE_INFO:
+			static uint8_t infoState = 0;
+			if(first)
+			{
+				first=0;
+				Display::Clear();
+			}
+
+			press = Button::isPressed(Button::BUTTON_SET);
+			if(press == Button::BUTTON_SHORT_PRESS)
+			{
+				Display::Clear();
+				infoState++;
+				break;
+			}
+			else if (press == Button::BUTTON_LONG_PRESS)
+			{
+				fade();
+				switchTo(STATE_DISPLAY);
+			}
+			press = Button::isPressed(Button::BUTTON_MAN);
+			if(press == Button::BUTTON_LONG_PRESS)
+			{
+				Display::ResetTimeout();
+				Display::DisableBlinking();
+				Data::setDefault();	//reset EEPROM
+				Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION1));
+				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
+				Data::resetCountdown();
+				Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
+				fade();
+				switchTo(STATE_DISPLAY);
+				break;
+			}
+			switch (infoState)
+			{
+			case 0:	//Temp
+				Display::SetByte(0,0x78);	//small t
+				Display::SetNegValue(1,Data::GetTemp(Data::DATA_CURRENT_TEMP));
+				break;
+			case 1: //Build Date
+				//Build Date
+				Display::SetByte(0,Display::numToByte(BUILD_DAY/10));
+				Display::SetByte(1,Display::numToByte(BUILD_DAY%10) | DEC_DOT);
+				Display::SetByte(2,Display::numToByte(BUILD_MONTH/10));
+				Display::SetByte(3,Display::numToByte(BUILD_MONTH%10) | DEC_DOT);
+				Display::SetByte(4,Display::numToByte(BUILD_YEAR/10));
+				Display::SetByte(5,Display::numToByte(BUILD_YEAR%10));
+				break;
+			case 2:
+				//Build Version
+				Display::SetByte(0,0x1C); //v
+				Display::SetByte(1,Display::numToByte(BUILD_VERSION_MAJOR) | DEC_DOT);
+				Display::SetByte(2,Display::numToByte(BUILD_VERSION_MINOR) | DEC_DOT);
+				if(BUILD_VERSION_PATCH > 9)
+				{
+					Display::SetByte(3,Display::numToByte(BUILD_VERSION_PATCH/10));
+					Display::SetByte(4,Display::numToByte(BUILD_VERSION_PATCH%10));
+				}
+				else
+				{
+					Display::SetByte(3,Display::numToByte(BUILD_VERSION_PATCH));
+				}
+				break;
+			case 3: //Current Runtime in 4 digit hour and 1 decimal point hour
+				Display::Set4DigValue(0,Timer::getCurrentRuntime());
+				Display::SetByte(5,0x74); //h
+				break;
+			case 4: //Total Runtime
+				Display::Set4DigValue(0,Data::Get(Data::DATA_TOTAL_RUNTIME));
+				Display::SetByte(5,0x5E); //d
+				break;
+			default:
+				infoState = 0;	//return
 				break;
 			}
 			break;

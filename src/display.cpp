@@ -114,9 +114,56 @@ void Display::SetValue(digit_t digit, uint16_t val)
 	}
 }
 
+//val = +/-(0.1 .. 1.0,1.1 .. 10.0,11.0 .. 99.0) * 10 = +/- 1..999
+//position = 0..2 -> 4 digits long
+void Display::SetNegValue(uint8_t position, int16_t val)
+{
+	if(position>2) position = 2;	//high limit
+	if(val > 999)	//set high limit
+	{
+		val = 999;
+	}
+	if(val < -999)	//set low limit
+	{
+		val = -999;
+	}
+
+	if(val < 0)
+	{
+		SetByte(position,0x40);	//Negative, minus
+		val = abs(val);
+	}
+	else
+	{
+		SetByte(position,0x00);	//Positive, nothing
+	}
+	
+	SetByte(position+1,numToByteArray[val/100]);
+	SetByte(position+2,numToByteArray[(val%100)/10]);
+	SetByte(position+3,numToByteArray[val%10]);
+	setDot(position+2, 1);	//dot at second position
+}
+
+//val = (0.1 .. 9999.9) * 10 = +/- 1..99999
+//position = 0..1 -> 5 digits long
+void Display::Set4DigValue(uint8_t position, uint32_t val)
+{
+	if(position>1) position = 1;	//high limit
+	if(val > 99999)	//set high limit
+	{
+		val = 99999;
+	}
+	SetByte(position,numToByteArray[val/10000]);
+	SetByte(position+1,numToByteArray[(val%10000)/1000]);
+	SetByte(position+2,numToByteArray[(val%1000)/100]);
+	SetByte(position+3,numToByteArray[(val%100)/10]);
+	SetByte(position+4,numToByteArray[val%10]);
+	setDot(position+3, 1);	//dot at third position
+}
+
 void Display::SetByte(uint8_t pos, uint8_t byte)
 {
-	if(byte & 0x80)
+	if(byte & DEC_DOT)
 	{
 		setDot(pos,1);
 	}
@@ -149,6 +196,11 @@ void Display::SetBrightness(uint8_t val)
 void Display::EnableBlinking(digit_t digit)
 {
 	blinkingEnabled = digit+1;
+	blinkCounter = 6; //switch to off state first
+}
+
+void Display::ResetBlinkCounter()
+{
 	blinkCounter = 0;
 }
 
@@ -193,11 +245,11 @@ void Display::Draw()
 		{
 		case ANIMATION_NONE:	//No Animation, Display or Blink values
 			blinkCounter++;
-			if(blinkCounter > 5)	//blinkCounter 0..5
+			if(blinkCounter > 11)	//blinkCounter 0..11
 			{
 				blinkCounter = 0;
 			}
-			if(blinkingEnabled && blinkCounter > 4)	//Blinking ..5
+			if(blinkingEnabled && blinkCounter > 5)	//Off 0..5
 			{
 				switch (blinkingEnabled) {
 					case 1: //DIGIT_INTERVAL
@@ -228,7 +280,7 @@ void Display::Draw()
 						break;
 				}
 			}
-			else	//Not Blinking 0..4
+			else	//On 6..11
 			{
 				for(uint8_t i=0;i<6;i++)
 				{

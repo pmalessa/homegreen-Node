@@ -14,6 +14,7 @@ public:
     static void Wakeup();
     static uint32_t getMillis();
     static void count();
+    static uint32_t getCurrentRuntime();
 };
 
 #endif /* TIMER_H_ */

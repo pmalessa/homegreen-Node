@@ -20,7 +20,7 @@ class Display
 {
 public:
     #define REFRESH_RATE 100 //ms
-    #define TM_DOT 0x80
+    #define DEC_DOT 0x80
 
     typedef enum{
         ANIMATION_NONE,
@@ -35,6 +35,8 @@ public:
     static void DeInit();
     static void Clear();
     static void SetValue(digit_t digit, uint16_t val); //val = (0.1 .. 1.0,1.1 .. 10.0,11.0 .. 99.0) * 10 = 1..990
+    static void SetNegValue(uint8_t position, int16_t val);
+    static void Set4DigValue(uint8_t position, uint32_t val);
     static void SetByte(uint8_t pos, uint8_t byte);
     static void SetBrightness(uint8_t val); //0..7
     static void EnableBlinking(digit_t digit);
@@ -46,6 +48,7 @@ public:
     static void ResetTimeout();
     static bool IsTimeout();
     static uint8_t numToByte(uint8_t num);
+    static void ResetBlinkCounter();
 private:
     static void setDot(uint8_t dot_pos, uint8_t val) //left to right
     {
@@ -60,7 +63,7 @@ private:
     }
     static void dsend(uint8_t pos, uint8_t byte)
     {
-	    tm1637_setByte(pos,byte | (dotmask & (1 << pos) ? TM_DOT : 0));
+	    tm1637_setByte(pos,byte | (dotmask & (1 << pos) ? DEC_DOT : 0));
     }
 
     static animation_t currentAnimation;

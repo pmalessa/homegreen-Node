@@ -15,7 +15,12 @@
 #include <avr/sleep.h>
 #include <stdlib.h>
 
-#define BUILD_DATE 20200308
+#define BUILD_DAY 10
+#define BUILD_MONTH 5
+#define BUILD_YEAR 20
+#define BUILD_VERSION_MAJOR 1
+#define BUILD_VERSION_MINOR 3
+#define BUILD_VERSION_PATCH 3
 
 #define DEBUG1_DDR DDRB
 #define DEBUG1_PORT PORTB
@@ -55,7 +60,7 @@
 #define LED_PIN PC2
 
 //#define SLEEP_INTERVAL_S 4	//4000ms = 4s
-#define DISPLAY_TIMEOUT_S 5 //5sec
+#define DISPLAY_TIMEOUT_S 10 //5sec
 
 #define true 1
 #define false 0

@@ -9,15 +9,22 @@
 #define TEMP_H_
 
 #include "PLATFORM.h"
-#include "driver/i2cmaster.h"
 #include "data.hpp"
+#include "DeltaTimer.hpp"
+
+extern "C"
+{
+#include "driver/i2cmaster.h"
+}
 
 class Temp
 {
 public:
     static void Init();
-    static void updateTemp();
-    static float getFloat(uint16_t val);
+    static void Sleep();
+    static void Wakeup();
+    static void run();
+    static float getFloat(int16_t val);
     static uint16_t getTempAdjustFactor();
 
 private:
@@ -37,6 +44,8 @@ private:
 
     #define TEMP_ADJ_FACTOR 10	//% per degree of temperature
     #define TEMP_MIN 15.0		//min temperature for temp adjustment
+
+    static DeltaTimer tempTimer;
 
     static bool read16bitRegister(uint8_t reg, uint16_t* response)
     {

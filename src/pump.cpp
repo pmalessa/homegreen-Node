@@ -63,11 +63,7 @@ void Pump::Increment()	//1min steps
 
 void Pump::Decrement()	//1min steps
 {
-	if(pumpCounter <=60)
-	{
-		pumpCounter = 0;
-	}
-	else
+	if(pumpCounter >60)
 	{
 		pumpCounter -= 60;
 	}
