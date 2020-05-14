@@ -23,16 +23,18 @@ public:
     static void setLoad(uint8_t state);
     static bool isAdcStable();
     static bool isPowerLost();
+    static void disableSolarCharger(uint8_t state);
     static void run();
 private:
     static uint16_t adc2vol()
     {
+        currentCapVoltage = ADC;
 	    uint32_t result = 1125300L / currentCapVoltage; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
 	    return result;
     }
 
     #define CHANNEL_1V1	0b1110
-    #define LOWVOLTAGE 2800	//Low Voltage Threshold in mV
+    #define LOWVOLTAGE 3000	//Low Voltage Threshold in mV
 
     #define ALPHA 0.7    //alpha value for EWMA Filtering
 

@@ -7,10 +7,18 @@
 #include "data.hpp"
 #include "temp.hpp"
 #include "button.hpp"
-extern "C"
-{
-  #include "driver/light_ws2812.h"
-}
+#include "Led.hpp"
+
+/**
+ * Homegreen Node Basic Firmware
+ * -----------------------------
+ * Power Consumption while Sleep:
+ * - CPU in IDLE Mode, 1MHz Clock still driving Timer and IO
+ * - Timer0 off (maybe using for 1sec wakeup later as wdt inaccurate?), Timer1 on 1kHz for Voltage Doubler
+ * 
+ **/
+
+
 
 typedef enum{
 	STATE_BOOT,
@@ -25,20 +33,14 @@ typedef enum{
 state_t state = STATE_BOOT;
 
 uint8_t first = 1;
-uint8_t wakeupTimeout = 0;
+uint8_t loadCounter = 0;
 uint8_t wakeReason = 0;
 volatile uint8_t wdt_interrupt = 0;
-struct cRGB led[1];
 DeltaTimer buttonStepTimer, runtimeTimer;
 
 ISR(WDT_vect) {
 	wdt_interrupt = 1;
 	Data::decCountdown(8);
-	led[0].g = 0x10;
-	ws2812_setleds(led,1);
-	_delay_ms(20);
-	led[0].g = 0x00;
-	ws2812_setleds(led,1);
 }
 
 void switchTo(state_t newstate)
@@ -56,7 +58,7 @@ void anypress_callback()	//called if any Button pressed or released
 	Display::ResetTimeout();
 }
 
-//m��p 1 otterdamoo <3
+//mööp 1 otterdamoo <3
 
 int main (void) {
 	//watchdog init
@@ -86,11 +88,7 @@ int main (void) {
 	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
 	WDTCSR = (1 << WDIE) | (1 << WDP3) | (1 << WDP0); 	//Set to Interrupt Mode and "every 8 s"
 
-	led[0].r = 0;led[0].g = 0;led[0].b = 0;
-
-	//power saving
-//	PRR |= (1 << PRTWI) | (1 << PRTIM1);
-
+	Led::Init();
 	Timer::Init();
 	Button::Init();
 	Button::SetCallback(&anypress_callback);
@@ -100,6 +98,7 @@ int main (void) {
 	Display::Init();
 	Temp::Init();
 
+	DEBUG1_DDR |= _BV(DEBUG1_PIN);
 
 	buttonStepTimer.setTimeStep(100); //set step of long press
 	runtimeTimer.setTimeStep(86400000); //24h, 1 day
@@ -119,7 +118,7 @@ int main (void) {
 			Data::Set(Data::DATA_TOTAL_RUNTIME,Data::Get(Data::DATA_TOTAL_RUNTIME)+10);
 			Data::Save();
 		}
-		_delay_ms(10);
+		Timer::shortSleep(10);
 	}
 }
 
@@ -151,38 +150,15 @@ void state_machine()
 			{
 				first = 0;
 				Power::setInputPower(1);
-				_delay_ms(200);
+				Led::Blink(2,100);
 				if(Power::isPowerConnected())	//if PB connected
 				{
-					led[0].g = 0x10;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].g = 0x00;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].g = 0x10;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].g = 0x00;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
 					Display::Init();
 					Display::StartAnimation(Display::ANIMATION_BOOT);
 				}
 				else							//if no PB connected
 				{
-					led[0].r = 0x10;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].r = 0x00;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].r = 0x10;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
-					led[0].r = 0x00;
-					ws2812_setleds(led,1);
-					_delay_ms(100);
+					Led::Blink(1,100);
 					switchTo(STATE_SLEEP);		//-> Sleep State
 					break;
 				}
@@ -444,9 +420,14 @@ void state_machine()
 				first = 0;
 				Display::DeInit();					//DeInit Display
 				Power::setInputPower(0);			//disable Powerbank
+				Power::disableSolarCharger(false);	//reenable Solar Charger
 			}
+			Temp::Sleep();
 			Power::Sleep();
-		    set_sleep_mode(SLEEP_MODE_PWR_DOWN);	//Sleep mode: only wdt and pin interrupt
+			Timer::Sleep();
+			DEBUG1_PORT &= ~(_BV(DEBUG1_PIN));
+		    set_sleep_mode(SLEEP_MODE_IDLE);	//Sleep mode Idle: using Timer Clock for Voltage Doubler
+			wdt_interrupt = 0;						//clear open interrupts
 		    cli();									//disable interrupts
 			sleep_enable();							//enable sleep
 //			sleep_bod_disable();					//disable BOD for power save
@@ -455,12 +436,15 @@ void state_machine()
 			/*zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz*/
 			//waked up
 			sleep_disable();						//disable sleep
+			DEBUG1_PORT |= (_BV(DEBUG1_PIN));
+			Timer::Wakeup();
 			Power::Wakeup();
 			sei();									//enable interrupts
 
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
 			{
 				wdt_interrupt = 0;
+				Led::Blink(1,20);
 				if(Data::getCountdown() == 0)		//if countdown reached
 				{
 					wakeReason = 0; //Reason Wakeup for Countdown
@@ -479,55 +463,48 @@ void state_machine()
 			}
 			break;
 		case STATE_WAKEUP:
-			/** Wakeup State
-			 * Run multiple Load cycles to wakeup Powerbank
-			 * once successful, check Wakeup Reason:
-			 *     Countdown reached -> Pump State
-			 *     Power low -> Charge Cap and Sleep State
-			 *     Button -> Display State
-			 * if not successful, back to sleep and try again
-			 */
 			if(first)
 			{
 				first = 0;
+				loadCounter = 4;	//try for 20 times
+				Led::On();
+				Power::disableSolarCharger(true);	//disable Solar Charger and wait
+				Timer::shortSleep(1000);	//TODO: remove
+				Power::setLoad(1);
+				Timer::shortSleep(200);
+				Power::setLoad(0);
+				Timer::shortSleep(200);
 				Power::setInputPower(1);
-				wakeupTimeout = 20;	//try for 4 seconds
 			}
 			if(Power::isPowerConnected())
 			{
-				Power::setLoad(1);
-				_delay_ms(150);
-				Power::setLoad(0);
-				_delay_ms(150);
 				//successfully woken up
-				Display::Init();
+				Led::Off();
 				switch (wakeReason)
 				{
 				case 0: //Countdown
+					Display::Init();
+					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
 					while(!Display::IsAnimationDone())
 					{
 						Display::Draw();
-						_delay_ms(30);
+						Timer::shortSleep(30);
 					}
 					switchTo(STATE_PUMPING);		//switch to Pump State
 					break;
 				case 1: //Charging
-					Display::StartAnimation(Display::ANIMATION_CHARGE);
-					while(!Display::IsAnimationDone())
-					{
-						Display::Draw();
-						_delay_ms(30);
-					}
-					Display::StopAnimation();
+					Led::fadeAnimation(); //Led Charge Animation
 					switchTo(STATE_SLEEP);		//switch to Sleep State
 					break;
 				case 2: //Button
+					Display::Init();
+					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
 					while(!Display::IsAnimationDone())
 					{
 						Display::Draw();
-						_delay_ms(30);
+						Timer::shortSleep(30);
 					}
 					switchTo(STATE_DISPLAY);		//switch to Display State
 					break;
@@ -537,17 +514,17 @@ void state_machine()
 			}
 			else
 			{
-				if(wakeupTimeout)
+				if(loadCounter)
 				{
-					wakeupTimeout--;
-					Power::setLoad(1);
-					_delay_ms(200);
-					Power::setLoad(0);
-					_delay_ms(200);
+					loadCounter--;
+					Timer::shortSleep(250);
 				}
 				else
 				{
-					switchTo(STATE_SLEEP);	//unsuccessful, back to sleep, try 1min later?
+					Power::setInputPower(0);
+					Led::Off();
+					Timer::shortSleep(2000);
+					switchTo(STATE_WAKEUP);	//unsuccessful, back to sleep, try 1min later?
 				}
 			}
 			break;
@@ -562,7 +539,7 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				_delay_ms(1000);	//wait for Cap to charge a bit
+				Timer::shortSleep(1000);	//wait for Cap to charge a bit
 				Display::StartAnimation(Display::ANIMATION_PUMP);
 				hubConnected = Pump::isHubConnected();
 				currentPump = 0;
@@ -595,11 +572,7 @@ void state_machine()
 					break;
 				}
 			}
-			led[0].g = 0x10;
-			ws2812_setleds(led,1);
-			_delay_ms(20);
-			led[0].g = 0x00;
-			ws2812_setleds(led,1);
+			Led::Blink(1,20);
 
 			press = Button::isPressed(Button::BUTTON_MAN);
 			if(press == Button::BUTTON_LONG_PRESS)				//if Button MAN long pressed, disable Pump

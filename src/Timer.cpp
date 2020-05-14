@@ -7,10 +7,42 @@ void Timer::Init()
 {
 	//Init 1ms Timer, use Timer 0
 	TCCR0A = 0x00;							//Register zuruecksetzen
-	TCCR0A |= (1 << CTC0) | (1 << CS01)| (1 << CS00);	//CTC Mode / Prescaler 64
+	TCCR0A |= (1 << CTC0) | (1 << CS01);	//CTC Mode / Prescaler 8
 	OCR0A = 125 - 1;						// 1000000 / 8 / 1000 = 125 -> 1000Hz
 	TIMSK0 = (1<<OCIE0A);					//Enable Compare Interrupt
 	GTCCR &= ~(1 << TSM);					//Timer starten
+}
+
+void Timer::shortSleep(uint32_t ms)
+{
+	PRR &= ~(1 << PRTIM0);	//enable Timer
+	TIMSK0 = (1<<OCIE0A);	//Enable Compare Interrupt every ms
+
+	DEBUG1_PORT &= ~(_BV(DEBUG1_PIN));
+	set_sleep_mode(SLEEP_MODE_IDLE);	//Sleep mode Idle
+	for(uint32_t i=0;i<ms;i++)
+	{
+		cli();									//disable interrupts
+		sleep_enable();							//enable sleep
+		sei();									//enable interrupts
+		sleep_cpu();							//sleep...
+		/*zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz*/
+		//waked up
+		sleep_disable();						//disable sleep
+	}
+	DEBUG1_PORT |= (_BV(DEBUG1_PIN));
+}
+
+void Timer::Sleep()
+{
+	TIMSK0 = 0; //disable Timer0 interrupts
+	PRR |= (1 << PRTIM0);
+}
+
+void Timer::Wakeup()
+{
+	PRR &= ~(1 << PRTIM0);
+	TIMSK0 = (1<<OCIE0A); //enable Timer0 Compare Interrupt
 }
 
 uint32_t Timer::getMillis()
