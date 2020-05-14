@@ -323,7 +323,6 @@ void Display::Draw()
 			{
 				state = 0;
 				animationDone = true;
-				break;
 			}
 			for(uint8_t i=0;i<6;i++)
 			{
@@ -359,45 +358,6 @@ void Display::Draw()
 				dsend(i,dig[i]);	//send all digits
 			}
 			break;
-
-		case ANIMATION_CHARGE:
-			static uint8_t speedCounter = 0, speedValue = 4;
-			if(state == 1)	//clear first
-			{
-				Clear();
-				SetBrightness(7);
-			}
-			if(speedCounter < speedValue)
-			{
-				speedCounter++;
-			}
-			else
-			{
-				speedCounter = 0;
-				if(state > 5)	//done
-				{
-					state = 0;
-					animationDone = true;
-					break;
-				}
-				switch (toggle) {
-					case 0:
-						SetByte(state-1, 0x30);
-						toggle = 1;
-						break;
-					default:
-						SetByte(state-1, 0x36);
-						toggle = 0;
-						state++;
-						break;
-				}
-				SetBrightness(7);
-			}
-			for(uint8_t i=0;i<6;i++)
-			{
-				dsend(i,dig[i]);	//send all digits
-			}
-			break;
 		case ANIMATION_FADE:
 			static uint8_t min = 1;
 			if(state == 0)
@@ -409,7 +369,7 @@ void Display::Draw()
 				else
 				{
 					state = 1;
-					_delay_ms(400);
+					Timer::shortSleep(400);
 				}
 			}
 			else

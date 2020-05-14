@@ -13,15 +13,35 @@ void Timer::Init()
 	GTCCR &= ~(1 << TSM);					//Timer starten
 }
 
+void Timer::shortSleep(uint32_t ms)
+{
+	PRR &= ~(1 << PRTIM0);	//enable Timer
+	TIMSK0 = (1<<OCIE0A);	//Enable Compare Interrupt every ms
+
+	DEBUG1_PORT &= ~(_BV(DEBUG1_PIN));
+	set_sleep_mode(SLEEP_MODE_IDLE);	//Sleep mode Idle
+	for(uint32_t i=0;i<ms;i++)
+	{
+		cli();									//disable interrupts
+		sleep_enable();							//enable sleep
+		sei();									//enable interrupts
+		sleep_cpu();							//sleep...
+		/*zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz*/
+		//waked up
+		sleep_disable();						//disable sleep
+	}
+	DEBUG1_PORT |= (_BV(DEBUG1_PIN));
+}
+
 void Timer::Sleep()
 {
 	TIMSK0 = 0; //disable Timer0 interrupts
-	//PRR |= (1 << PRTIM0);
+	PRR |= (1 << PRTIM0);
 }
 
 void Timer::Wakeup()
 {
-	//PRR &= ~(1 << PRTIM0);
+	PRR &= ~(1 << PRTIM0);
 	TIMSK0 = (1<<OCIE0A); //enable Timer0 Compare Interrupt
 }
 

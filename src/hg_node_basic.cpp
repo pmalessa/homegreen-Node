@@ -41,7 +41,6 @@ DeltaTimer buttonStepTimer, runtimeTimer;
 ISR(WDT_vect) {
 	wdt_interrupt = 1;
 	Data::decCountdown(8);
-	Led::Blink(1,20);
 }
 
 void switchTo(state_t newstate)
@@ -89,10 +88,6 @@ int main (void) {
 	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
 	WDTCSR = (1 << WDIE) | (1 << WDP3) | (1 << WDP0); 	//Set to Interrupt Mode and "every 8 s"
 
-
-	//power saving
-	PRR |= (1 << PRTWI);
-
 	Led::Init();
 	Timer::Init();
 	Button::Init();
@@ -103,6 +98,7 @@ int main (void) {
 	Display::Init();
 	Temp::Init();
 
+	DEBUG1_DDR |= _BV(DEBUG1_PIN);
 
 	buttonStepTimer.setTimeStep(100); //set step of long press
 	runtimeTimer.setTimeStep(86400000); //24h, 1 day
@@ -122,7 +118,7 @@ int main (void) {
 			Data::Set(Data::DATA_TOTAL_RUNTIME,Data::Get(Data::DATA_TOTAL_RUNTIME)+10);
 			Data::Save();
 		}
-		_delay_ms(10);
+		Timer::shortSleep(10);
 	}
 }
 
@@ -424,10 +420,14 @@ void state_machine()
 				first = 0;
 				Display::DeInit();					//DeInit Display
 				Power::setInputPower(0);			//disable Powerbank
+				Power::disableSolarCharger(false);	//reenable Solar Charger
 			}
+			Temp::Sleep();
 			Power::Sleep();
 			Timer::Sleep();
+			DEBUG1_PORT &= ~(_BV(DEBUG1_PIN));
 		    set_sleep_mode(SLEEP_MODE_IDLE);	//Sleep mode Idle: using Timer Clock for Voltage Doubler
+			wdt_interrupt = 0;						//clear open interrupts
 		    cli();									//disable interrupts
 			sleep_enable();							//enable sleep
 //			sleep_bod_disable();					//disable BOD for power save
@@ -436,6 +436,7 @@ void state_machine()
 			/*zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz*/
 			//waked up
 			sleep_disable();						//disable sleep
+			DEBUG1_PORT |= (_BV(DEBUG1_PIN));
 			Timer::Wakeup();
 			Power::Wakeup();
 			sei();									//enable interrupts
@@ -443,6 +444,7 @@ void state_machine()
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
 			{
 				wdt_interrupt = 0;
+				Led::Blink(1,20);
 				if(Data::getCountdown() == 0)		//if countdown reached
 				{
 					wakeReason = 0; //Reason Wakeup for Countdown
@@ -461,57 +463,48 @@ void state_machine()
 			}
 			break;
 		case STATE_WAKEUP:
-			/** Wakeup State
-			 * Run multiple Load cycles to wakeup Powerbank
-			 * once successful, check Wakeup Reason:
-			 *     Countdown reached -> Pump State
-			 *     Power low -> Charge Cap and Sleep State
-			 *     Button -> Display State
-			 * if not successful, back to sleep and try again
-			 */
 			if(first)
 			{
 				first = 0;
-				loadCounter = 12;	//try for 20 times
-				Power::setLoad(1);
-				_delay_ms(50);
-				Power::setLoad(0);
-				_delay_ms(200);
-				Power::setInputPower(1);
+				loadCounter = 4;	//try for 20 times
 				Led::On();
+				Power::disableSolarCharger(true);	//disable Solar Charger and wait
+				Timer::shortSleep(1000);	//TODO: remove
+				Power::setLoad(1);
+				Timer::shortSleep(200);
+				Power::setLoad(0);
+				Timer::shortSleep(200);
+				Power::setInputPower(1);
 			}
 			if(Power::isPowerConnected())
 			{
 				//successfully woken up
 				Led::Off();
-				Display::Init();
 				switch (wakeReason)
 				{
 				case 0: //Countdown
+					Display::Init();
+					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
 					while(!Display::IsAnimationDone())
 					{
 						Display::Draw();
-						_delay_ms(30);
+						Timer::shortSleep(30);
 					}
 					switchTo(STATE_PUMPING);		//switch to Pump State
 					break;
 				case 1: //Charging
-					Display::StartAnimation(Display::ANIMATION_CHARGE);
-					while(!Display::IsAnimationDone())
-					{
-						Display::Draw();
-						_delay_ms(30);
-					}
-					Display::StopAnimation();
+					Led::fadeAnimation(); //Led Charge Animation
 					switchTo(STATE_SLEEP);		//switch to Sleep State
 					break;
 				case 2: //Button
+					Display::Init();
+					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
 					while(!Display::IsAnimationDone())
 					{
 						Display::Draw();
-						_delay_ms(30);
+						Timer::shortSleep(30);
 					}
 					switchTo(STATE_DISPLAY);		//switch to Display State
 					break;
@@ -524,15 +517,14 @@ void state_machine()
 				if(loadCounter)
 				{
 					loadCounter--;
-					Power::setLoad(1);
-					_delay_ms(50);
-					Power::setLoad(0);
-					_delay_ms(200);
+					Timer::shortSleep(250);
 				}
 				else
 				{
+					Power::setInputPower(0);
 					Led::Off();
-					switchTo(STATE_SLEEP);	//unsuccessful, back to sleep, try 1min later?
+					Timer::shortSleep(2000);
+					switchTo(STATE_WAKEUP);	//unsuccessful, back to sleep, try 1min later?
 				}
 			}
 			break;
@@ -547,7 +539,7 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				_delay_ms(1000);	//wait for Cap to charge a bit
+				Timer::shortSleep(1000);	//wait for Cap to charge a bit
 				Display::StartAnimation(Display::ANIMATION_PUMP);
 				hubConnected = Pump::isHubConnected();
 				currentPump = 0;

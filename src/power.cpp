@@ -8,14 +8,17 @@ DeltaTimer Power::powerTimer;
 
 void Power::Init() {
 	EN_PB_DDR |= _BV(EN_PB_PIN);
+	USB_IN_M_DDR |= _BV(USB_IN_M_PIN);
+	USB_IN_P_DDR |= _BV(USB_IN_P_PIN);
+	EN_PB_DDR |= _BV(EN_PB_PIN);
     EN_LOAD_DDR |= _BV(EN_LOAD_PIN);
     CHK_5V_DDR &= ~(_BV(CHK_5V_PIN)); 							//digital input
 	CHK_5V_PORT &= ~(_BV(CHK_5V_PIN));							//turn off internal pullup
 
     EN_LOAD_PORT &= ~(_BV(EN_LOAD_PIN));						//turn off load
 
-	EN_CLK_DDR |=_BV(EN_CLK_PIN);	//maybe to remove if bridged
-
+	EN_CLK_DDR &= ~_BV(EN_CLK_PIN);	//set as input as its unused
+	DDRB |= _BV(PB1);
 	powerTimer.setTimeStep(10); //10 ms
 
 	//Init 1kHz Clock Timer, use Timer 1
@@ -30,7 +33,7 @@ void Power::Init() {
 
 void Power::Wakeup()
 {
-	//PRR &= ~_BV(PRADC);
+	PRR &= ~_BV(PRADC);
     ADCSRA = _BV(ADEN) | _BV(ADATE)| _BV(ADPS1) | _BV(ADPS0);	//Enable, Auto Trigger, DIV8
     ADCSRB = 0;													//Free running mode
 	ADMUX = CHANNEL_1V1;										//measuring 1.1V Reference Voltage
@@ -42,16 +45,30 @@ void Power::Wakeup()
 	adcStable = false;
 }
 
+void Power::disableSolarCharger(uint8_t state)
+{
+	if(state == true)
+	{
+		USB_IN_M_PORT |= _BV(USB_IN_M_PIN);		//turn off Charger
+		USB_IN_P_PORT |= _BV(USB_IN_P_PIN);		//turn off Charger
+	}
+	else
+	{
+		USB_IN_M_PORT &= ~_BV(USB_IN_M_PIN); 	//turn on Charger
+		USB_IN_P_PORT &= ~_BV(USB_IN_P_PIN);	//turn on Charger
+	}
+	
+}
+
 void Power::Sleep()
 {
 	ADCSRA = 0;	//disable ADC
-	//PRR |= _BV(PRADC);
+	PRR |= _BV(PRADC);
 }
 
 bool Power::isAdcStable()
 {
 	return 1;
-	//return (adcStable == 10);	//ADC is stable once 10 measurements are buffered
 }
 
 bool Power::isPowerConnected()	//check if the 5V Pin is high
@@ -86,12 +103,10 @@ void Power::setInputPower(uint8_t state)
 	{
 		EN_PB_PORT &= ~_BV(EN_PB_PIN); 		//turn on PB
 		TCCR1A &= ~_BV(COM1A0);				//disable Clock Signal
-		//PRR |= _BV(PRTIM1);
 	}
 	else
 	{
 		EN_PB_PORT |= _BV(EN_PB_PIN);	//turn off PB
-		//PRR &= ~_BV(PRTIM1);
 		TCCR1A |= _BV(COM1A0);			//enable Clock Signal
 	}
 }
@@ -112,7 +127,6 @@ void Power::run()
 {
 	if(powerTimer.isTimeUp())	//every 10ms
 	{
-		//currentCapVoltage = (uint16_t) (ALPHA * ADC + (1-ALPHA) * currentCapVoltage);	//EWMA Filtering of ADC Input
 		currentCapVoltage = ADC;
 	}
 }

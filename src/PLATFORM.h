@@ -22,6 +22,10 @@
 #define BUILD_VERSION_MINOR 3
 #define BUILD_VERSION_PATCH 3
 
+#define DEBUG1_DDR DDRD
+#define DEBUG1_PORT PORTD
+#define DEBUG1_PIN PD7
+
 #define EN_PB_DDR DDRC
 #define EN_PB_PORT PORTC
 #define EN_PB_PIN PC2

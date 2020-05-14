@@ -28,6 +28,7 @@ public:
     static uint16_t getTempAdjustFactor();
 
 private:
+    static uint8_t initialized;
     #define LM75A_DEFAULT_ADDRESS		0x90		// 0x48 << 1
     #define LM75A_REGISTER_TEMP			0			// Temperature register (read-only)
     #define LM75A_REGISTER_CONFIG		1			// Configuration register
