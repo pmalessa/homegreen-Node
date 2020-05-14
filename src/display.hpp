@@ -26,7 +26,6 @@ public:
         ANIMATION_NONE,
 	    ANIMATION_BOOT,
 	    ANIMATION_WAKE,
-	    ANIMATION_CHARGE,
         ANIMATION_PUMP,
         ANIMATION_FADE
     }animation_t;

@@ -31,28 +31,6 @@ private:
     static uint16_t pumpCounter;
     static uint8_t currentPump;
 
-    #define PUMP_DDR DDRA
-    #define PUMP_PORT PORTA
-    #define PUMP_PIN PA1
-
-    #define PUMP_SIG_DDR DDRC
-    #define PUMP_SIG_PORT PORTC
-    #define PUMP_SIG_PIN PC7
-
-    #define PUMP_TEST_DDR DDRC
-    #define PUMP_TEST_PORT PORTC
-    #define PUMP_TEST_PIN PC0
-
-    #define USBM_DDR DDRC
-    #define USBM_PORT PORTC
-    #define USBM_PIN PC1
-    #define USBM_PINREG PINC
-
-    #define USBP_DDR DDRD
-    #define USBP_PORT PORTD
-    #define USBP_PIN PD0
-    #define USBP_PINREG PIND
-
     #define PUMP_1 0
     #define PUMP_2 1
     #define PUMP_3 2
