@@ -127,10 +127,12 @@ bool Pump::isHubConnected()
 
 bool Pump::isPumpConnected()
 {
+	return true;
+	/*
 	PUMP_PORT &= ~_BV(PUMP_PIN);	//turn off
 	PUMP_TEST_PORT |= _BV(PUMP_TEST_PIN);	//turn on test current limiter
 
-	_delay_ms(10);	//wait 100ms
+	_delay_ms(5000);	//wait 100ms
 
 	if(!(PUMP_SIG_PINREG & _BV(PUMP_SIG_PIN)))	//check if current limit reached, if pin low
 	{
@@ -144,6 +146,7 @@ bool Pump::isPumpConnected()
 		PUMP_TEST_PORT &= ~_BV(PUMP_TEST_PIN);	//turn off
 		return false;
 	}
+	*/
 }
 
 void Pump::setCurrentPump(uint8_t pumpID)

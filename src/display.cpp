@@ -56,11 +56,18 @@ void Display::Init()
 	resetAnimation = false;
 }
 
-void Display::DeInit()
+void Display::Sleep()
 {
 	isInitialized = false;
 	Clear();
 	tm1637_deInit();
+}
+
+void Display::Wake()
+{
+	TM_DDR |= TM_BIT_CLK | TM_BIT_DAT;
+	TM_OUT |= TM_BIT_CLK;
+	isInitialized = true;
 }
 
 void Display::Clear()
@@ -70,6 +77,19 @@ void Display::Clear()
 		dig[i]=0;
 	}
 	dotmask = 0;
+	for(uint8_t i=0;i<6;i++)
+	{
+		dsend(i,dig[i]);	//send all digits
+	}
+}
+
+void Display::Full()
+{
+	for(uint8_t i=0;i<6;i++)
+	{
+		dig[i]=0xFF;
+	}
+	dotmask = 0xFF;
 	for(uint8_t i=0;i<6;i++)
 	{
 		dsend(i,dig[i]);	//send all digits
@@ -212,6 +232,39 @@ void Display::StopAnimation()
 bool Display::IsAnimationDone()
 {
 	return animationDone;
+}
+
+void Display::ShowError(Data::statusBit_t status)
+{
+	Display::SetByte(0,0x73); //P
+	Display::SetByte(2,0x40); //-
+	Display::SetByte(3,0x79); //E
+	Display::SetByte(4,0x50); //r
+	Display::SetByte(5,0x50); //r
+
+	switch (status)
+	{
+	case Data::STATUS_PB_ERR:
+		Display::SetByte(1,0x7C); //b
+		break;
+	case Data::STATUS_P1_ERR:
+		Display::SetByte(1,Display::numToByte(1)); //1
+		break;
+	case Data::STATUS_P2_ERR:
+		Display::SetByte(1,Display::numToByte(2)); //2
+		break;
+	case Data::STATUS_P3_ERR:
+		Display::SetByte(1,Display::numToByte(3)); //3
+		break;
+	}
+}
+
+void Display::ForceDraw()
+{
+	for(uint8_t i=0;i<6;i++)
+	{
+		dsend(i,dig[i]);	//send all digits
+	}
 }
 
 void Display::Draw()

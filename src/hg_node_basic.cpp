@@ -34,7 +34,7 @@ typedef enum{
 state_t state = STATE_BOOT;
 
 uint8_t first = 1;
-uint8_t loadCounter = 0;
+uint8_t checkCounter = 0, tryCounter = 3;	//try 3 times every 5 seconds, then Error
 uint8_t wakeReason = 0;
 Data::statusBit_t status;
 volatile uint8_t wdt_interrupt = 0;
@@ -379,7 +379,7 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				Display::DeInit();					//DeInit Display
+				Display::Sleep();					//DeInit Display
 				if(Power::isPowerConnected() && Power::isCapNotFull())	//if Powerbank available and Cap not full
 				{
 					switchTo(STATE_CHARGING);							//charge cap before going to sleep
@@ -412,7 +412,7 @@ void state_machine()
 				wdt_interrupt = 0;
 				if(Data::GetErrors())	//if any error bit set
 				{
-					Led::Blink(2,50);	//blink error
+					Led::Blink(3,50);	//blink error
 				}
 				else
 				{
@@ -454,7 +454,7 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				loadCounter = 4;	//try for 20 times
+				checkCounter = 4;	//check every 250ms 4 times
 				Led::On();
 				Power::disableSolarCharger(true);	//disable Solar Charger and wait
 				Timer::shortSleep(500);
@@ -471,7 +471,7 @@ void state_machine()
 				switch (wakeReason)
 				{
 				case 0: //Countdown
-					Display::Init();
+					Display::Wake();
 					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
 					while(!Display::IsAnimationDone())
@@ -485,7 +485,7 @@ void state_machine()
 					switchTo(STATE_CHARGING);		//switch to Charge State
 					break;
 				case 2: //Button
-					Display::Init();
+					Display::Wake();
 					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
 					while(!Display::IsAnimationDone())
@@ -493,7 +493,7 @@ void state_machine()
 						Display::Draw();
 						Timer::shortSleep(30);
 					}
-					switchTo(STATE_ERROR);		//switch to Error State, than Display State
+					switchTo(STATE_ERROR);		//switch to Error State -> Display State
 					break;
 				default:
 					break;
@@ -501,17 +501,28 @@ void state_machine()
 			}
 			else
 			{
-				if(loadCounter)
+				if(checkCounter)
 				{
-					loadCounter--;
+					checkCounter--;
 					Timer::shortSleep(250);
 				}
 				else
 				{
-					Power::setInputPower(0);
-					Led::Off();
-					Timer::shortSleep(2000);
-					switchTo(STATE_WAKEUP);	//unsuccessful, back to sleep, try 1min later?
+					if(tryCounter)
+					{
+						tryCounter--;
+						Power::setInputPower(0);
+						Led::Off();
+						Timer::shortSleep(5000);
+						switchTo(STATE_WAKEUP);	//unsuccessful, try again
+					}
+					else
+					{
+						tryCounter = 3;	//reset tryCounter
+						Data::SetError(Data::STATUS_PB_ERR);	//save error
+						if(wakeReason == 0) Data::setCustomCountdown(300);	//if wakeReason was Countdown, try 5 minutes later, as it is urgent
+						switchTo(STATE_SLEEP);	//back to sleep
+					}
 				}
 			}
 			break;
@@ -565,9 +576,11 @@ void state_machine()
 			{
 				if(!Pump::isPumpConnected())	//if pump not connected
 				{
-					Display::SetByte(3,0x3F);	//O
-					Display::SetByte(4,0x71);	//F
-					Display::SetByte(5,0x71);	//F
+					Display::ShowError((Data::statusBit_t)(Data::STATUS_P1_ERR+currentPump));
+					Data::SetError((Data::statusBit_t)(Data::STATUS_P1_ERR+currentPump));	//save error
+					Display::ForceDraw();
+					Timer::shortSleep(2000);
+					Pump::setCountdown(0); //stop current pump
 				}
 				else
 				{
@@ -632,6 +645,7 @@ void state_machine()
 			{
 				Pump::Stop();
 				Display::StopAnimation();
+				Data::SetError(Data::STATUS_PB_ERR);
 				switchTo(STATE_SLEEP);
 				break;
 			}
@@ -641,48 +655,40 @@ void state_machine()
 			if(first)
 			{
 				first=0;
-				Display::SetByte(0,0x73); //P
-				Display::SetByte(2,0x40); //-
-				Display::SetByte(3,0x79); //E
-				Display::SetByte(4,0x50); //r
-				Display::SetByte(5,0x50); //r
 				if(Data::GetErrors() & _BV(Data::STATUS_PB_ERR))
 				{
 					status = Data::STATUS_PB_ERR;
-					Display::SetByte(1,0x7C); //b
 				}
 				else if (Data::GetErrors() & _BV(Data::STATUS_P1_ERR))
 				{
 					status = Data::STATUS_P1_ERR;
-					Display::SetByte(1,Display::numToByte(1)); //1
 				}
 				else if (Data::GetErrors() & _BV(Data::STATUS_P2_ERR))
 				{
 					status = Data::STATUS_P2_ERR;
-					Display::SetByte(1,Display::numToByte(2)); //2
 				}
 				else if (Data::GetErrors() & _BV(Data::STATUS_P3_ERR))
 				{
 					status = Data::STATUS_P3_ERR;
-					Display::SetByte(1,Display::numToByte(3)); //3
 				}
 				else
 				{	//no error
 					switchTo(STATE_DISPLAY);
 					break;
 				}
+				Display::ShowError(status);
 			}
 			if(Button::isPressed(Button::BUTTON_MAN) == Button::BUTTON_LONG_PRESS)	//ignore error forever
 			{
 				Data::ClearError(status);
 				Data::SetIgnoreError(status);
 				//write IGNORE
-				Display::SetByte(1,Display::numToByte(1)); //I
+				Display::SetByte(0,Display::numToByte(1)); //I
 				Display::SetByte(1,0x7D); //G
-				Display::SetByte(1,0x54); //n
-				Display::SetByte(1,0x5C); //o
-				Display::SetByte(1,0x50); //r
-				Display::SetByte(1,0x79); //E
+				Display::SetByte(2,0x54); //n
+				Display::SetByte(3,0x5C); //o
+				Display::SetByte(4,0x50); //r
+				Display::SetByte(5,0x79); //E
 				fade();
 				switchTo(STATE_ERROR);		//switch to Error for next error
 				break;

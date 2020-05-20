@@ -87,6 +87,10 @@ uint16_t Data::Get(data_type_t data_type)
 
 void Data::SetError(statusBit_t bit)
 {
+	if(ignoreStatus & _BV(bit))	//if Error is ignored, dont set it
+	{
+		return;
+	}
 	status |= _BV(bit);
 	Save();
 }
@@ -123,6 +127,11 @@ void Data::decCountdown(uint8_t sec)
 void Data::resetCountdown()
 {
 	countdown = (uint32_t)data[DATA_INTERVAL]*360;	//converted to seconds
+}
+
+void Data::setCustomCountdown(uint32_t sec)
+{
+	countdown = sec;
 }
 
 uint32_t Data::getCountdown()

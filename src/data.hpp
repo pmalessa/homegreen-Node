@@ -51,6 +51,7 @@ public:
 	static uint16_t getCountdownDisplay();
 	static uint32_t getCountdown();
 	static void resetCountdown();
+	static void setCustomCountdown(uint32_t sec);
 	static void setDefault();
 
 private:
