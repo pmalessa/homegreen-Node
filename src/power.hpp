@@ -19,6 +19,8 @@ public:
     static void Sleep();
     static bool isPowerConnected();
     static bool isCapLow();
+    static bool isCapFull();
+    static bool isCapNotFull();
     static void setInputPower(uint8_t state);
     static void setLoad(uint8_t state);
     static bool isAdcStable();
@@ -35,6 +37,8 @@ private:
 
     #define CHANNEL_1V1	0b1110
     #define LOWVOLTAGE 3000	//Low Voltage Threshold in mV
+    #define CAPFULL 4300	//Cap Full High Threshold in mV
+    #define CAPNOTFULL 4100	//Cap Full Low Threshold in mV
 
     #define ALPHA 0.7    //alpha value for EWMA Filtering
 

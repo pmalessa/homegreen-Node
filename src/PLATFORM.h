@@ -15,12 +15,12 @@
 #include <avr/sleep.h>
 #include <stdlib.h>
 
-#define BUILD_DAY 14
+#define BUILD_DAY 20
 #define BUILD_MONTH 5
 #define BUILD_YEAR 20
 #define BUILD_VERSION_MAJOR 1
-#define BUILD_VERSION_MINOR 3
-#define BUILD_VERSION_PATCH 4
+#define BUILD_VERSION_MINOR 4
+#define BUILD_VERSION_PATCH 0
 
 #define DEBUG1_DDR DDRD
 #define DEBUG1_PORT PORTD
@@ -66,6 +66,7 @@
 #define PUMP_SIG_DDR DDRC
 #define PUMP_SIG_PORT PORTC
 #define PUMP_SIG_PIN PC7
+#define PUMP_SIG_PINREG PINC
 
 #define PUMP_TEST_DDR DDRC
 #define PUMP_TEST_PORT PORTC

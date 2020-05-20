@@ -28,9 +28,20 @@ public:
 		TEMPDATA_SIZE
 	}temp_type_t;
 
+	typedef enum{
+		STATUS_PB_ERR = 1,
+		STATUS_P1_ERR,
+		STATUS_P2_ERR,
+		STATUS_P3_ERR
+	}statusBit_t;
+
 	static void Init();
 	static void Set(data_type_t data_type, uint16_t val);
 	static uint16_t Get(data_type_t data_type);
+	static void SetError(statusBit_t bit);
+	static void ClearError(statusBit_t bit);
+	static uint8_t GetErrors();
+	static void SetIgnoreError(statusBit_t bit);
 	static void SetTemp(temp_type_t temp_type, int16_t val);
 	static int16_t GetTemp(temp_type_t temp_type);
 	static void Save();
@@ -40,6 +51,7 @@ public:
 	static uint16_t getCountdownDisplay();
 	static uint32_t getCountdown();
 	static void resetCountdown();
+	static void setCustomCountdown(uint32_t sec);
 	static void setDefault();
 
 private:
@@ -53,7 +65,9 @@ private:
 		ADR_SETUP_TEMP = 0x10,
 		ADR_CURRENT_TEMP = 0x12,
 		ADR_TOTAL_RUNTIME = 0x14,
-		ADR_CRC = 0x16
+		ADR_STATUS = 0x16,
+		ADR_IGNORE_STATUS = 0x18,
+		ADR_CRC = 0x20
 	};
 	#define DATA_INIT_CONST 0xF00DBABE
 	#define DATA_INTERVAL_DEFAULT  120		//1..990 = 0.1..99.0
@@ -65,6 +79,7 @@ private:
 	static uint16_t data[DATA_SIZE];
 	static int16_t tempdata[TEMPDATA_SIZE];
 	static uint32_t countdown;
+	static uint8_t status, ignoreStatus;
 };
 
 

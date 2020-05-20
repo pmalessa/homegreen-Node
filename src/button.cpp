@@ -9,21 +9,21 @@ void (*button_callback)(void) = nullptr;
 
 void Button::Init()
 {
-	PCICR = (1<<PCIE2);				//Enable Interrupt Handler for Pins 23..16
-	PCMSK2 |= (1<<BUT_MINUS_INT);	//Enable Interrupt on Button Pin
-	PCMSK2 |= (1<<BUT_PLUS_INT);
-	PCMSK2 |= (1<<BUT_SET_INT);
-	PCMSK2 |= (1<<BUT_MAN_INT);
+	PCICR = _BV(PCIE2);				//Enable Interrupt Handler for Pins 23..16
+	PCMSK2 |= _BV(BUT_MINUS_INT);	//Enable Interrupt on Button Pin
+	PCMSK2 |= _BV(BUT_PLUS_INT);
+	PCMSK2 |= _BV(BUT_SET_INT);
+	PCMSK2 |= _BV(BUT_MAN_INT);
 
-	BUTTON_DDR &= ~(_BV(BUTTON_MINUS));			//Set Button as Input
-	BUTTON_DDR &= ~(_BV(BUTTON_PLUS));
-	BUTTON_DDR &= ~(_BV(BUTTON_SET));
-	BUTTON_DDR &= ~(_BV(BUTTON_MAN));
+	BUTTON_DDR &= ~_BV(BUTTON_MINUS);			//Set Button as Input
+	BUTTON_DDR &= ~_BV(BUTTON_PLUS);
+	BUTTON_DDR &= ~_BV(BUTTON_SET);
+	BUTTON_DDR &= ~_BV(BUTTON_MAN);
 
-	TOUCH_PWR_DDR |= (1 << TOUCH_PWR_PIN);
-	TOUCH_PWR_PORT |= (1 << TOUCH_PWR_PIN);
+	TOUCH_PWR_DDR |= _BV(TOUCH_PWR_PIN);
+	TOUCH_PWR_PORT |= _BV(TOUCH_PWR_PIN);
 
-	buttonTimer.setTimeStep(50);
+	buttonTimer.setTimeStep(10);
 }
 
 void Button::SetCallback(void (*func)(void))	//set pin change callback function
@@ -61,11 +61,11 @@ bool Button::isAnyPressed()
 
 void Button::run() 
 {
-	if(buttonTimer.isTimeUp()) //50ms
+	if(buttonTimer.isTimeUp()) //10ms
 	{
 		for(uint8_t i=1;i<5;i++)	//1..4 -> PD1..PD4
 		{
-			if(BUTTON_PIN & (1 << i))
+			if(BUTTON_PIN & _BV(i))
 			{
 				if(button[i].pressed == 0)	//if new press
 				{
@@ -87,7 +87,6 @@ void Button::run()
 	- button released and last Press > SHORT PRESS THRESHOLD -> Short Press
 	- else no press
 */
-
 Button::button_press Button::isPressed(Button::button_t but)
 {
 	if(button[but].pressed)
@@ -126,5 +125,4 @@ ISR(PCINT2_vect)	//Pin change on Button Pin
 {
 	Button::setAnyPressed();
 	if(button_callback != nullptr) button_callback();
-	//wake up
 }

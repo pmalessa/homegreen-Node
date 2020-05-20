@@ -10,6 +10,7 @@
 
 #include "PLATFORM.h"
 #include "DeltaTimer.hpp"
+#include "data.hpp"
 extern "C"
 {
   #include "driver/tm1637.h"
@@ -24,15 +25,16 @@ public:
 
     typedef enum{
         ANIMATION_NONE,
-	    ANIMATION_BOOT,
 	    ANIMATION_WAKE,
         ANIMATION_PUMP,
         ANIMATION_FADE
     }animation_t;
 
     static void Init();
-    static void DeInit();
+    static void Wake();
+    static void Sleep();
     static void Clear();
+    static void Full();
     static void SetValue(digit_t digit, uint16_t val); //val = (0.1 .. 1.0,1.1 .. 10.0,11.0 .. 99.0) * 10 = 1..990
     static void SetNegValue(uint8_t position, int16_t val);
     static void Set4DigValue(uint8_t position, uint32_t val);
@@ -43,6 +45,8 @@ public:
     static void StartAnimation(animation_t animation);
     static void StopAnimation();
     static bool IsAnimationDone();
+    static void ShowError(Data::statusBit_t status);
+    static void ForceDraw();
     static void Draw();
     static void ResetTimeout();
     static bool IsTimeout();

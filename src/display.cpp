@@ -29,20 +29,6 @@ uint8_t numToByteArray[] =
     0x6F, // 9
 };
 
-uint8_t bootAnimation[] =
-{
-		0x76, // H
-		0x79, // E
-		0x38, // L
-		0x38, // L
-		0x3F, // O
-		0x00, // 0
-		0x00, // 0
-		0x00, // 0
-		0x00, // 0
-		0x00, // 0
-};
-
 #define PUMPANIMATION_FRAMES 4
 uint16_t pumpanimation[PUMPANIMATION_FRAMES] = {
 		0x0108,
@@ -70,11 +56,18 @@ void Display::Init()
 	resetAnimation = false;
 }
 
-void Display::DeInit()
+void Display::Sleep()
 {
 	isInitialized = false;
 	Clear();
 	tm1637_deInit();
+}
+
+void Display::Wake()
+{
+	TM_DDR |= TM_BIT_CLK | TM_BIT_DAT;
+	TM_OUT |= TM_BIT_CLK;
+	isInitialized = true;
 }
 
 void Display::Clear()
@@ -84,6 +77,19 @@ void Display::Clear()
 		dig[i]=0;
 	}
 	dotmask = 0;
+	for(uint8_t i=0;i<6;i++)
+	{
+		dsend(i,dig[i]);	//send all digits
+	}
+}
+
+void Display::Full()
+{
+	for(uint8_t i=0;i<6;i++)
+	{
+		dig[i]=0xFF;
+	}
+	dotmask = 0xFF;
 	for(uint8_t i=0;i<6;i++)
 	{
 		dsend(i,dig[i]);	//send all digits
@@ -228,6 +234,39 @@ bool Display::IsAnimationDone()
 	return animationDone;
 }
 
+void Display::ShowError(Data::statusBit_t status)
+{
+	Display::SetByte(0,0x73); //P
+	Display::SetByte(2,0x40); //-
+	Display::SetByte(3,0x79); //E
+	Display::SetByte(4,0x50); //r
+	Display::SetByte(5,0x50); //r
+
+	switch (status)
+	{
+	case Data::STATUS_PB_ERR:
+		Display::SetByte(1,0x7C); //b
+		break;
+	case Data::STATUS_P1_ERR:
+		Display::SetByte(1,Display::numToByte(1)); //1
+		break;
+	case Data::STATUS_P2_ERR:
+		Display::SetByte(1,Display::numToByte(2)); //2
+		break;
+	case Data::STATUS_P3_ERR:
+		Display::SetByte(1,Display::numToByte(3)); //3
+		break;
+	}
+}
+
+void Display::ForceDraw()
+{
+	for(uint8_t i=0;i<6;i++)
+	{
+		dsend(i,dig[i]);	//send all digits
+	}
+}
+
 void Display::Draw()
 {
 	static uint8_t state = 0, toggle = 0;
@@ -288,29 +327,7 @@ void Display::Draw()
 				}
 			}
 			break;
-		
-		case ANIMATION_BOOT:
-			if(animationDone)
-			{
-				break;
-			}
-			if(state == 0)	//clear first
-			{
-				Clear();
-			}
-			if(state > 9)	//state = 10, done
-			{
-				state = 0;
-				animationDone = true;
-				break;
-			}
-			SetByte(state%5, bootAnimation[state]); //state 0..9
-			state++;
-			for(uint8_t i=0;i<6;i++)
-			{
-				dsend(i,dig[i]);	//send all digits
-			}
-			break;
+
 		case ANIMATION_PUMP:
 			dotmask = 0;
 			dig[0] = 0x73; //P
