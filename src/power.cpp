@@ -97,6 +97,32 @@ bool Power::isCapLow()	//return if last measured CurVol lower than Threshold
 	}
 }
 
+bool Power::isCapFull()	//return if last measured CurVol higher than Cap Full High Threshold
+{
+	uint16_t curVol = adc2vol();
+	if(curVol > CAPFULL)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+bool Power::isCapNotFull()	//return if last measured CurVol lower than Cap Full Lower Threshold
+{
+	uint16_t curVol = adc2vol();
+	if(curVol < CAPNOTFULL)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
 void Power::setInputPower(uint8_t state)
 {
 	if (state == 1)

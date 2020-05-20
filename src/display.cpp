@@ -29,20 +29,6 @@ uint8_t numToByteArray[] =
     0x6F, // 9
 };
 
-uint8_t bootAnimation[] =
-{
-		0x76, // H
-		0x79, // E
-		0x38, // L
-		0x38, // L
-		0x3F, // O
-		0x00, // 0
-		0x00, // 0
-		0x00, // 0
-		0x00, // 0
-		0x00, // 0
-};
-
 #define PUMPANIMATION_FRAMES 4
 uint16_t pumpanimation[PUMPANIMATION_FRAMES] = {
 		0x0108,
@@ -288,29 +274,7 @@ void Display::Draw()
 				}
 			}
 			break;
-		
-		case ANIMATION_BOOT:
-			if(animationDone)
-			{
-				break;
-			}
-			if(state == 0)	//clear first
-			{
-				Clear();
-			}
-			if(state > 9)	//state = 10, done
-			{
-				state = 0;
-				animationDone = true;
-				break;
-			}
-			SetByte(state%5, bootAnimation[state]); //state 0..9
-			state++;
-			for(uint8_t i=0;i<6;i++)
-			{
-				dsend(i,dig[i]);	//send all digits
-			}
-			break;
+
 		case ANIMATION_PUMP:
 			dotmask = 0;
 			dig[0] = 0x73; //P

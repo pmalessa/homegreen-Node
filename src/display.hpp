@@ -24,7 +24,6 @@ public:
 
     typedef enum{
         ANIMATION_NONE,
-	    ANIMATION_BOOT,
 	    ANIMATION_WAKE,
         ANIMATION_PUMP,
         ANIMATION_FADE

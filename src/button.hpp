@@ -47,12 +47,12 @@ private:
 	#define BUTTON_DDR DDRD
 	#define BUTTON_PIN PIND
 
-	#define BUTTON_SHORTPRESS_THRESHOLD 2 //100ms
-	#define BUTTON_LONGPRESS_THRESHOLD 16 //800ms
+	#define BUTTON_SHORTPRESS_THRESHOLD 5 //50ms
+	#define BUTTON_LONGPRESS_THRESHOLD 80 //800ms
 
 	typedef struct{
 		uint8_t pressed;
-		uint8_t duration;
+		uint16_t duration;
 	}button_struct;
 
 	static button_struct button[5];

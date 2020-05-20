@@ -24,7 +24,6 @@ public:
     static void Sleep();
     static void Wakeup();
     static void run();
-    static float getFloat(int16_t val);
     static uint16_t getTempAdjustFactor();
 
 private:
@@ -40,11 +39,6 @@ private:
     #define LM75_CONF_OS_COMP_INT		1			// OS operation mode selection
     #define LM75_CONF_OS_POL			2			// OS polarity selection
     #define LM75_CONF_OS_F_QUE			3			// OS fault queue programming
-
-    #define LM75A_INVALID_TEMPERATURE	-1000.0f	// Just an arbritary value outside of the sensor limits
-
-    #define TEMP_ADJ_FACTOR 10	//% per degree of temperature
-    #define TEMP_MIN 15.0		//min temperature for temp adjustment
 
     static DeltaTimer tempTimer;
 

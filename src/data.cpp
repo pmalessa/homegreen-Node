@@ -11,6 +11,7 @@
 uint16_t Data::data[DATA_SIZE] = {0};
 int16_t Data::tempdata[TEMPDATA_SIZE] = {0};
 uint32_t Data::countdown = 0;
+uint8_t Data::status = 0, Data::ignoreStatus = 0;
 
 void Data::Init()
 {
@@ -24,6 +25,8 @@ void Data::Init()
 	data[DATA_DURATION3] = eeprom_read_word((uint16_t *)ADR_DURATION3);
 	data[DATA_TOTAL_RUNTIME] = eeprom_read_word((uint16_t *)ADR_TOTAL_RUNTIME);
 	tempdata[DATA_SETUP_TEMP] = eeprom_read_word((uint16_t *)ADR_SETUP_TEMP);
+	status = eeprom_read_word((uint16_t *)ADR_STATUS);
+	ignoreStatus = eeprom_read_word((uint16_t *)ADR_IGNORE_STATUS);
 	resetCountdown();
 }
 
@@ -82,6 +85,29 @@ uint16_t Data::Get(data_type_t data_type)
 	return data[data_type];
 }
 
+void Data::SetError(statusBit_t bit)
+{
+	status |= _BV(bit);
+	Save();
+}
+
+uint8_t Data::GetErrors()
+{
+	return status;
+}
+
+void Data::ClearError(statusBit_t bit)
+{
+	status &= ~_BV(bit);
+	Save();
+}
+
+void Data::SetIgnoreError(statusBit_t bit)
+{
+	ignoreStatus |= _BV(bit);
+	Save();
+}
+
 void Data::decCountdown(uint8_t sec)
 {
 	if(countdown > sec)
@@ -119,6 +145,8 @@ void Data::Save()
 	eeprom_write_word((uint16_t *)ADR_DURATION3, data[DATA_DURATION3]);		//save duration
 	eeprom_write_word((uint16_t *)ADR_TOTAL_RUNTIME, data[DATA_TOTAL_RUNTIME]);		//save total runtime
 	eeprom_write_word((uint16_t *)ADR_SETUP_TEMP, tempdata[DATA_SETUP_TEMP]);	//save setup temp
+	eeprom_write_word((uint16_t *)ADR_STATUS, status);	//save status
+	eeprom_write_word((uint16_t *)ADR_IGNORE_STATUS, ignoreStatus);	//save ignoreStatus
 	//create CRC
 	_delay_ms(10);
 	sei();
@@ -131,6 +159,8 @@ void Data::setDefault()
 	Set(DATA_DURATION2,DATA_DURATION2_DEFAULT);
 	Set(DATA_DURATION3,DATA_DURATION3_DEFAULT);
 	SetTemp(DATA_SETUP_TEMP,DATA_SETUP_TEMP_DEFAULT);
+	status = 0;
+	ignoreStatus = 0;
 	Save();
 	eeprom_write_dword((uint32_t *)ADR_INIT_CONST, DATA_INIT_CONST);	//set init constant
 }

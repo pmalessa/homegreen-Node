@@ -24,6 +24,7 @@ public:
     static void Decrement();
     static void run();
     static bool isHubConnected();
+    static bool isPumpConnected();
     static void setCurrentPump(uint8_t pumpID);
     static uint8_t getCurrentPump();
 private:

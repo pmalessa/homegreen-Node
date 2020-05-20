@@ -25,18 +25,20 @@ typedef enum{
 	STATE_DISPLAY,
 	STATE_CONFIG,
 	STATE_SLEEP,
+	STATE_CHARGING,
 	STATE_WAKEUP,
 	STATE_PUMPING,
-	STATE_MAN_PUMPING,
-	STATE_INFO
+	STATE_INFO,
+	STATE_ERROR
 }state_t;
 state_t state = STATE_BOOT;
 
 uint8_t first = 1;
 uint8_t loadCounter = 0;
 uint8_t wakeReason = 0;
+Data::statusBit_t status;
 volatile uint8_t wdt_interrupt = 0;
-DeltaTimer buttonStepTimer, runtimeTimer;
+DeltaTimer buttonStepTimer, runtimeTimer, pumpCheckTimer;
 
 ISR(WDT_vect) {
 	wdt_interrupt = 1;
@@ -64,24 +66,7 @@ int main (void) {
 	//watchdog init
 	cli();
 	uint8_t reset_flag = MCUSR;
-	if(reset_flag & (1<< PORF))
-	{
-		//Power on Reset
-	}
-	else if(reset_flag & (1<< BORF))
-	{
-		//BrownOut Reset - no real reset, switch to charging
-		state = STATE_WAKEUP;
-		wakeReason = 2; //Charging
-	}
-	else if(reset_flag & (1<< EXTRF))
-	{
-		//External Reset
-	}
-	else if(reset_flag & (1<< WDRF))
-	{
-		//Watchdog Reset
-	}
+	UNUSED(reset_flag);
 
 	MCUSR = 0;
 	MCUSR &= ~(1<<WDRF);								//unlock step 1
@@ -142,32 +127,8 @@ void state_machine()
 
 	switch (state) {
 		case STATE_BOOT:
-			/** Boot State
-			 * if PB connected -> Display State
-			 * else -> Sleep State
-			 */
-			if(first)
-			{
-				first = 0;
-				Power::setInputPower(1);
-				Led::Blink(2,100);
-				if(Power::isPowerConnected())	//if PB connected
-				{
-					Display::Init();
-					Display::StartAnimation(Display::ANIMATION_BOOT);
-				}
-				else							//if no PB connected
-				{
-					Led::Blink(1,100);
-					switchTo(STATE_SLEEP);		//-> Sleep State
-					break;
-				}
-			}
-			if(Display::IsAnimationDone())	//if Animation done
-			{
-				Display::StopAnimation();
-				switchTo(STATE_DISPLAY);	//-> Display State
-			}
+			Led::Blink(2,100);
+			switchTo(STATE_SLEEP);		//-> Sleep State
 			break;
 		case STATE_DISPLAY:
 			/** Display State
@@ -217,7 +178,7 @@ void state_machine()
 				Display::SetByte(4,0x3F);	//O
 				Display::SetByte(5,0x54);	//N
 				fade();
-				switchTo(STATE_MAN_PUMPING);								//switch to MAN_PUMPING
+				switchTo(STATE_PUMPING);								//switch to PUMPING
 				break;
 			}
 			press = Button::isPressed(Button::BUTTON_SET);						//get Button Set Press
@@ -419,6 +380,11 @@ void state_machine()
 			{
 				first = 0;
 				Display::DeInit();					//DeInit Display
+				if(Power::isPowerConnected() && Power::isCapNotFull())	//if Powerbank available and Cap not full
+				{
+					switchTo(STATE_CHARGING);							//charge cap before going to sleep
+					break;
+				}
 				Power::setInputPower(0);			//disable Powerbank
 				Power::disableSolarCharger(false);	//reenable Solar Charger
 			}
@@ -444,7 +410,14 @@ void state_machine()
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
 			{
 				wdt_interrupt = 0;
-				Led::Blink(1,20);
+				if(Data::GetErrors())	//if any error bit set
+				{
+					Led::Blink(2,50);	//blink error
+				}
+				else
+				{
+					Led::Blink(1,20);	//blink okay
+				}
 				if(Data::getCountdown() == 0)		//if countdown reached
 				{
 					wakeReason = 0; //Reason Wakeup for Countdown
@@ -462,6 +435,21 @@ void state_machine()
 				switchTo(STATE_WAKEUP);
 			}
 			break;
+		case STATE_CHARGING:
+			if(first)
+			{
+				first = 0;
+			}
+			if(Button::isAnyPressed())
+			{
+				switchTo(STATE_WAKEUP);
+				break;
+			}
+			if(Power::isCapFull())
+			{
+				switchTo(STATE_SLEEP);
+			}
+			break;
 		case STATE_WAKEUP:
 			if(first)
 			{
@@ -469,7 +457,7 @@ void state_machine()
 				loadCounter = 4;	//try for 20 times
 				Led::On();
 				Power::disableSolarCharger(true);	//disable Solar Charger and wait
-				Timer::shortSleep(1000);	//TODO: remove
+				Timer::shortSleep(500);
 				Power::setLoad(1);
 				Timer::shortSleep(200);
 				Power::setLoad(0);
@@ -494,8 +482,7 @@ void state_machine()
 					switchTo(STATE_PUMPING);		//switch to Pump State
 					break;
 				case 1: //Charging
-					Led::fadeAnimation(); //Led Charge Animation
-					switchTo(STATE_SLEEP);		//switch to Sleep State
+					switchTo(STATE_CHARGING);		//switch to Charge State
 					break;
 				case 2: //Button
 					Display::Init();
@@ -506,7 +493,7 @@ void state_machine()
 						Display::Draw();
 						Timer::shortSleep(30);
 					}
-					switchTo(STATE_DISPLAY);		//switch to Display State
+					switchTo(STATE_ERROR);		//switch to Error State, than Display State
 					break;
 				default:
 					break;
@@ -529,7 +516,6 @@ void state_machine()
 			}
 			break;
 		case STATE_PUMPING:
-		case STATE_MAN_PUMPING:
 			/** Pump State
 			 * Enable Pump and start Countdown
 			 * if Countdown reached -> Display State
@@ -539,12 +525,13 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				Timer::shortSleep(1000);	//wait for Cap to charge a bit
+				Timer::shortSleep(500);	//wait for Cap to charge a bit
 				Display::StartAnimation(Display::ANIMATION_PUMP);
 				hubConnected = Pump::isHubConnected();
 				currentPump = 0;
 				Pump::setCountdown(Data::Get(Data::data_type_t(Data::DATA_DURATION1+currentPump))*6);
 				Pump::Start();		//enable Pump for specified duration
+				pumpCheckTimer.setTimeStep(3000);	//check Pump after 3 seconds
 			}
 			Display::ResetTimeout(); 						//Display always on
 			if(Pump::getCountdown() == 0)					//if pump duration reached, switch to Display State
@@ -561,6 +548,7 @@ void state_machine()
 						break;
 					}
 					Pump::setCurrentPump(currentPump);
+					pumpCheckTimer.reset(); //check Pump after 3 seconds
 					Pump::setCountdown(Data::Get(Data::data_type_t(Data::DATA_DURATION1+currentPump))*6);
 				}
 				else
@@ -572,7 +560,21 @@ void state_machine()
 					break;
 				}
 			}
-			Led::Blink(1,20);
+
+			if(pumpCheckTimer.isTimeUp())
+			{
+				if(!Pump::isPumpConnected())	//if pump not connected
+				{
+					Display::SetByte(3,0x3F);	//O
+					Display::SetByte(4,0x71);	//F
+					Display::SetByte(5,0x71);	//F
+				}
+				else
+				{
+					pumpCheckTimer.setTimeStep(-1); //endless -> disable
+				}
+				
+			}
 
 			press = Button::isPressed(Button::BUTTON_MAN);
 			if(press == Button::BUTTON_LONG_PRESS)				//if Button MAN long pressed, disable Pump
@@ -598,6 +600,7 @@ void state_machine()
 					currentPump++;
 					if(currentPump >2) currentPump=0;
 					Pump::setCurrentPump(currentPump);
+					pumpCheckTimer.reset();	//check Pump after 3 seconds
 				}
 			}
 			press = Button::isPressed(Button::BUTTON_PLUS);
@@ -634,6 +637,63 @@ void state_machine()
 			}
 			break;
 
+		case STATE_ERROR:
+			if(first)
+			{
+				first=0;
+				Display::SetByte(0,0x73); //P
+				Display::SetByte(2,0x40); //-
+				Display::SetByte(3,0x79); //E
+				Display::SetByte(4,0x50); //r
+				Display::SetByte(5,0x50); //r
+				if(Data::GetErrors() & _BV(Data::STATUS_PB_ERR))
+				{
+					status = Data::STATUS_PB_ERR;
+					Display::SetByte(1,0x7C); //b
+				}
+				else if (Data::GetErrors() & _BV(Data::STATUS_P1_ERR))
+				{
+					status = Data::STATUS_P1_ERR;
+					Display::SetByte(1,Display::numToByte(1)); //1
+				}
+				else if (Data::GetErrors() & _BV(Data::STATUS_P2_ERR))
+				{
+					status = Data::STATUS_P2_ERR;
+					Display::SetByte(1,Display::numToByte(2)); //2
+				}
+				else if (Data::GetErrors() & _BV(Data::STATUS_P3_ERR))
+				{
+					status = Data::STATUS_P3_ERR;
+					Display::SetByte(1,Display::numToByte(3)); //3
+				}
+				else
+				{	//no error
+					switchTo(STATE_DISPLAY);
+					break;
+				}
+			}
+			if(Button::isPressed(Button::BUTTON_MAN) == Button::BUTTON_LONG_PRESS)	//ignore error forever
+			{
+				Data::ClearError(status);
+				Data::SetIgnoreError(status);
+				//write IGNORE
+				Display::SetByte(1,Display::numToByte(1)); //I
+				Display::SetByte(1,0x7D); //G
+				Display::SetByte(1,0x54); //n
+				Display::SetByte(1,0x5C); //o
+				Display::SetByte(1,0x50); //r
+				Display::SetByte(1,0x79); //E
+				fade();
+				switchTo(STATE_ERROR);		//switch to Error for next error
+				break;
+			}
+			//if any other button pressed
+			if(Button::isPressed(Button::BUTTON_PLUS) == Button::BUTTON_SHORT_PRESS || Button::isPressed(Button::BUTTON_SET) == Button::BUTTON_SHORT_PRESS || Button::isPressed(Button::BUTTON_MINUS) == Button::BUTTON_SHORT_PRESS)
+			{
+				Data::ClearError(status);
+				switchTo(STATE_ERROR);
+			}
+			break;
 		case STATE_INFO:
 			static uint8_t infoState = 0;
 			if(first)
