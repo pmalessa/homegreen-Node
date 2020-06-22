@@ -5,20 +5,27 @@ volatile uint32_t Timer::millis = 0;
 
 void Timer::Init()
 {
-	//Init 1ms Timer, use Timer 0
-	TCCR0A = 0x00;							//Register zuruecksetzen
-	TCCR0A |= _BV(CTC0) | _BV(CS01);	//CTC Mode / Prescaler 8
-	OCR0A = 125 - 1;						// 1000000 / 8 / 1000 = 125 -> 1000Hz
-	TIMSK0 = _BV(OCIE0A);					//Enable Compare Interrupt
+	//Init 250ms Timer, use Timer 0
+	PRR &= ~_BV(PRTIM0);	//enable Timer0
+	TCCR0A = 0x00;						//Register zuruecksetzen
+	TCCR0A |= _BV(CTC0) | _BV(CS02) | _BV(CS00);	//CTC Mode / Prescaler 1024
+	OCR0A = 255;						// 1000000 / 1024 / 4 = 256-1 -> 0.25Hz -> 250ms
+	TIMSK0 = _BV(OCIE0A);				//Enable Compare Interrupt
+
+	//Init 1kHz Clock Timer, use Timer 1
+	TCCR1A = 0x00; TCCR1B = 0x00; TCCR1C = 0x00;	//Register zuruecksetzen
+	TCCR1A &= ~_BV(COM1A0);							//disable Clock Output
+	TCCR1B |= _BV(WGM12) | _BV(CS11);				// CTC Mode OCR1A / Prescaler 8
+	OCR1A = 125 - 1;								// 1000000 / 8 / 1000 = 125 -> 1000Hz
+	TIMSK1 = _BV(OCIE1A);							//Enable Compare Interrupt
+	PRR &= ~_BV(PRTIM1);							//dont shut off Timer1
 	GTCCR &= ~_BV(TSM);					//Timer starten
 }
 
 void Timer::shortSleep(uint32_t ms)
 {
-	PRR &= ~_BV(PRTIM0);	//enable Timer
-	TIMSK0 = _BV(OCIE0A);	//Enable Compare Interrupt every ms
-
-	DEBUG1_PORT &= ~_BV(DEBUG1_PIN);
+	uint8_t state = TIMSK1;	//save prev. state
+	TIMSK1 = _BV(OCIE1A);
 	set_sleep_mode(SLEEP_MODE_IDLE);	//Sleep mode Idle
 	for(uint32_t i=0;i<ms;i++)
 	{
@@ -30,19 +37,17 @@ void Timer::shortSleep(uint32_t ms)
 		//waked up
 		sleep_disable();						//disable sleep
 	}
-	DEBUG1_PORT |= _BV(DEBUG1_PIN);
+	TIMSK1 = state; //restore state
 }
 
 void Timer::Sleep()
 {
-	TIMSK0 = 0; //disable Timer0 interrupts
-	PRR |= _BV(PRTIM0);
+	TIMSK1 = 0; //disable Timer1 interrupts
 }
 
 void Timer::Wakeup()
 {
-	PRR &= ~_BV(PRTIM0);
-	TIMSK0 = _BV(OCIE0A); //enable Timer0 Compare Interrupt
+	TIMSK1 = _BV(OCIE1A); //enable Timer1 Compare Interrupt
 }
 
 uint32_t Timer::getMillis()
@@ -60,8 +65,8 @@ void Timer::count()
 	millis++;
 }
 
-//1ms
-ISR(TIMER0_COMPA_vect)
+//1ms Timer1, active Timer
+ISR(TIMER1_COMPA_vect)
 {
 	Timer::count();
 }

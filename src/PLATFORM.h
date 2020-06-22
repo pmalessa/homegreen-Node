@@ -15,12 +15,12 @@
 #include <avr/sleep.h>
 #include <stdlib.h>
 
-#define BUILD_DAY 20
-#define BUILD_MONTH 5
+#define BUILD_DAY 22
+#define BUILD_MONTH 6
 #define BUILD_YEAR 20
 #define BUILD_VERSION_MAJOR 1
 #define BUILD_VERSION_MINOR 4
-#define BUILD_VERSION_PATCH 0
+#define BUILD_VERSION_PATCH 2
 
 #define DEBUG1_DDR DDRD
 #define DEBUG1_PORT PORTD
@@ -117,5 +117,11 @@ typedef enum{
 }digit_t;
 
 #define UNUSED(x) (void)(x)
+
+/* Macros to access bytes within words and words within longs */
+#define LOW_BYTE(x)     ((uint8_t)((x)&0xFF))
+#define HIGH_BYTE(x)    ((uint8_t)(((x)>>8)&0xFF))
+#define LOW_WORD(x)     ((uint16_t)((x)&0xFFFF))
+#define HIGH_WORD(x)    ((uint16_t)(((x)>>16)&0xFFFF))
 
 #endif /* PLATFORM_H_ */

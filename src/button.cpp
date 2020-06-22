@@ -26,6 +26,12 @@ void Button::Init()
 	buttonTimer.setTimeStep(10);
 }
 
+void Button::DeInit()
+{
+	PCICR &= ~ _BV(PCIE2);	//Disable Interrupts
+	TOUCH_PWR_PORT &= ~ _BV(TOUCH_PWR_PIN); //Disable Touch Power
+}
+
 void Button::SetCallback(void (*func)(void))	//set pin change callback function
 {
 	button_callback = func;

@@ -256,6 +256,10 @@ void Display::ShowError(Data::statusBit_t status)
 	case Data::STATUS_P3_ERR:
 		Display::SetByte(1,Display::numToByte(3)); //3
 		break;
+	case Data::STATUS_EP_ERR:
+		Display::SetByte(0,0x79); //E
+		Display::SetByte(1,0x73); //P
+		break;
 	}
 }
 

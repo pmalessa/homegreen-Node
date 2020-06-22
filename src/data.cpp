@@ -7,6 +7,7 @@
 
 #include "data.hpp"
 #include "avr/eeprom.h"
+#include "inc/CRC.hpp"
 
 uint16_t Data::data[DATA_SIZE] = {0};
 int16_t Data::tempdata[TEMPDATA_SIZE] = {0};
@@ -15,10 +16,13 @@ uint8_t Data::status = 0, Data::ignoreStatus = 0;
 
 void Data::Init()
 {
-	if(!(eeprom_read_dword((uint32_t *)ADR_INIT_CONST) == DATA_INIT_CONST))
+	//if EEPROM not initialized or wrong Data Version
+	if((eeprom_read_dword((uint32_t *)ADR_INIT_CONST) != DATA_INIT_CONST) || 
+		(eeprom_read_word((uint16_t *)ADR_EEP_VERSION) != DATA_EEP_VERSION))
 	{
 		setDefault();
 	}
+	//load data
 	data[DATA_INTERVAL] = eeprom_read_word((uint16_t *)ADR_INTERVAL);
 	data[DATA_DURATION1] = eeprom_read_word((uint16_t *)ADR_DURATION1);
 	data[DATA_DURATION2] = eeprom_read_word((uint16_t *)ADR_DURATION2);
@@ -27,7 +31,28 @@ void Data::Init()
 	tempdata[DATA_SETUP_TEMP] = eeprom_read_word((uint16_t *)ADR_SETUP_TEMP);
 	status = eeprom_read_word((uint16_t *)ADR_STATUS);
 	ignoreStatus = eeprom_read_word((uint16_t *)ADR_IGNORE_STATUS);
+
+	//IF CRC not correct, reset Data
+	if(CalcCRC() != eeprom_read_word((uint16_t *)ADR_CRC));
+	{
+		setDefault();
+	}
 	resetCountdown();
+}
+
+//get CRC calculated from local data
+uint16_t Data::CalcCRC()
+{
+	CRC::Reset();
+	CRC::AddWord(data[DATA_INTERVAL]);
+	CRC::AddWord(data[DATA_DURATION1]);
+	CRC::AddWord(data[DATA_DURATION2]);
+	CRC::AddWord(data[DATA_DURATION3]);
+	CRC::AddWord(data[DATA_TOTAL_RUNTIME]);
+	CRC::AddWord(data[DATA_SETUP_TEMP]);
+	CRC::AddWord(status);
+	CRC::AddWord(ignoreStatus);
+	return CRC::getValue();
 }
 
 void Data::Increment(data_type_t data_type)
@@ -146,19 +171,21 @@ uint16_t Data::getCountdownDisplay()
 
 void Data::Save()
 {
-	cli();
-	_delay_ms(10);
-	eeprom_write_word((uint16_t *)ADR_INTERVAL, data[DATA_INTERVAL]);		//save interval
-	eeprom_write_word((uint16_t *)ADR_DURATION1, data[DATA_DURATION1]);		//save duration
-	eeprom_write_word((uint16_t *)ADR_DURATION2, data[DATA_DURATION2]);		//save duration
-	eeprom_write_word((uint16_t *)ADR_DURATION3, data[DATA_DURATION3]);		//save duration
-	eeprom_write_word((uint16_t *)ADR_TOTAL_RUNTIME, data[DATA_TOTAL_RUNTIME]);		//save total runtime
-	eeprom_write_word((uint16_t *)ADR_SETUP_TEMP, tempdata[DATA_SETUP_TEMP]);	//save setup temp
-	eeprom_write_word((uint16_t *)ADR_STATUS, status);	//save status
-	eeprom_write_word((uint16_t *)ADR_IGNORE_STATUS, ignoreStatus);	//save ignoreStatus
-	//create CRC
-	_delay_ms(10);
-	sei();
+	if(Power::isAboveEEPROMThreshold())
+	{
+		cli();
+		eeprom_write_word((uint16_t *)ADR_INTERVAL, data[DATA_INTERVAL]);		//save interval
+		eeprom_write_word((uint16_t *)ADR_DURATION1, data[DATA_DURATION1]);		//save duration
+		eeprom_write_word((uint16_t *)ADR_DURATION2, data[DATA_DURATION2]);		//save duration
+		eeprom_write_word((uint16_t *)ADR_DURATION3, data[DATA_DURATION3]);		//save duration
+		eeprom_write_word((uint16_t *)ADR_TOTAL_RUNTIME, data[DATA_TOTAL_RUNTIME]);		//save total runtime
+		eeprom_write_word((uint16_t *)ADR_SETUP_TEMP, tempdata[DATA_SETUP_TEMP]);	//save setup temp
+		eeprom_write_word((uint16_t *)ADR_STATUS, status);	//save status
+		eeprom_write_word((uint16_t *)ADR_IGNORE_STATUS, ignoreStatus);	//save ignoreStatus
+		eeprom_write_word((uint16_t *)ADR_EEP_VERSION, DATA_EEP_VERSION);	//save EEPROM Version
+		eeprom_write_word((uint16_t *)ADR_CRC, CalcCRC());	//save CRC
+		sei();
+	}
 }
 
 void Data::setDefault()

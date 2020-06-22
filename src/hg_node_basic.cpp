@@ -12,14 +12,12 @@
 /**
  * Homegreen Node Basic Firmware
  * -----------------------------
- * Power Consumption while Sleep:
- * - CPU in IDLE Mode, 1MHz Clock still driving Timer and IO
- * - Timer0 off (maybe using for 1sec wakeup later as wdt inaccurate?), Timer1 on 1kHz for Voltage Doubler
+ * Timer 0 used as 1ms Timer in active mode, disabled in sleep
+ * Timer 1 used as Clock Output for Voltage Doubler in Sleep Mode, off in active mode
  * 
  **/
 
-
-
+//State Machine Typedef
 typedef enum{
 	STATE_BOOT,
 	STATE_DISPLAY,
@@ -33,6 +31,7 @@ typedef enum{
 }state_t;
 state_t state = STATE_BOOT;
 
+//Global Variables
 uint8_t first = 1;
 uint8_t checkCounter = 0, tryCounter = 3;	//try 3 times every 5 seconds, then Error
 uint8_t wakeReason = 0;
@@ -40,9 +39,18 @@ Data::statusBit_t status;
 volatile uint8_t wdt_interrupt = 0;
 DeltaTimer buttonStepTimer, runtimeTimer, pumpCheckTimer;
 
-ISR(WDT_vect) {
-	wdt_interrupt = 1;
-	Data::decCountdown(8);
+//Function Prototypes
+void state_machine();
+
+ISR(TIMER0_COMPA_vect) {	//250ms
+	static uint8_t cnt = 0;
+	cnt++;
+	if(cnt > 15)	//4x4 seconds = 16
+	{
+		cnt = 0;
+		wdt_interrupt = 1;
+		Data::decCountdown(8);
+	}
 }
 
 void switchTo(state_t newstate)
@@ -52,8 +60,6 @@ void switchTo(state_t newstate)
 	Display::StopAnimation();
 	Button::Clear();
 }
-
-void state_machine();
 
 void anypress_callback()	//called if any Button pressed or released
 {
@@ -65,13 +71,14 @@ void anypress_callback()	//called if any Button pressed or released
 int main (void) {
 	//watchdog init
 	cli();
+	asm("wdr"); //reset watchdog
 	uint8_t reset_flag = MCUSR;
 	UNUSED(reset_flag);
 
 	MCUSR = 0;
 	MCUSR &= ~(1<<WDRF);								//unlock step 1
 	WDTCSR = (1 << WDCE) | (1 << WDE);					//unlock step 2
-	WDTCSR = (1 << WDIE) | (1 << WDP3) | (1 << WDP0); 	//Set to Interrupt Mode and "every 8 s"
+	WDTCSR = (1 << WDE) | (1 << WDP3) | (1 << WDP0); 	//Set to Reset Mode and "every 8 s"
 
 	Led::Init();
 	Timer::Init();
@@ -86,12 +93,13 @@ int main (void) {
 	DEBUG1_DDR |= _BV(DEBUG1_PIN);
 
 	buttonStepTimer.setTimeStep(100); //set step of long press
-	runtimeTimer.setTimeStep(86400000); //24h, 1 day
+	runtimeTimer.setTimeStep(8640000); //2.4h, 0.1 day
 
 	sei();
 
 	while(1)
 	{
+		asm("wdr"); //reset watchdog
 		state_machine();
 		Display::Draw();
 		Power::run();
@@ -100,7 +108,7 @@ int main (void) {
 		Temp::run();
 		if(runtimeTimer.isTimeUp())
 		{
-			Data::Set(Data::DATA_TOTAL_RUNTIME,Data::Get(Data::DATA_TOTAL_RUNTIME)+10);
+			Data::Set(Data::DATA_TOTAL_RUNTIME,Data::Get(Data::DATA_TOTAL_RUNTIME)+1);
 			Data::Save();
 		}
 		Timer::shortSleep(10);
@@ -392,11 +400,10 @@ void state_machine()
 			Power::Sleep();
 			Timer::Sleep();
 			DEBUG1_PORT &= ~(_BV(DEBUG1_PIN));
-		    set_sleep_mode(SLEEP_MODE_IDLE);	//Sleep mode Idle: using Timer Clock for Voltage Doubler
+		    set_sleep_mode(SLEEP_MODE_IDLE);		//Sleep mode Idle: using Timer Clock for Voltage Doubler
 			wdt_interrupt = 0;						//clear open interrupts
 		    cli();									//disable interrupts
 			sleep_enable();							//enable sleep
-//			sleep_bod_disable();					//disable BOD for power save
 			sei();									//enable interrupts
 			sleep_cpu();							//sleep...
 			/*zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz*/
@@ -463,35 +470,45 @@ void state_machine()
 				Power::setLoad(0);
 				Timer::shortSleep(200);
 				Power::setInputPower(1);
+				Led::Off();
 			}
 			if(Power::isPowerConnected())
 			{
+				uint8_t vol_low = !Power::isAboveEEPROMThreshold();
 				//successfully woken up
-				Led::Off();
+				if(vol_low)
+				{
+					Button::DeInit();	//reInit touch chip to prevent wrong button presses
+					Timer::shortSleep(200);
+				}
+				
 				switch (wakeReason)
 				{
 				case 0: //Countdown
 					Display::Wake();
 					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
-					while(!Display::IsAnimationDone())
+					Button::Init();
+					while(!(Display::IsAnimationDone()) || Power::isCapLow())	//while animation not done or Cap Low
 					{
 						Display::Draw();
-						Timer::shortSleep(30);
+						Timer::shortSleep(30 + vol_low*60);	//Decrease Speed if Voltage Low
 					}
 					switchTo(STATE_PUMPING);		//switch to Pump State
 					break;
 				case 1: //Charging
+					Button::Init();
 					switchTo(STATE_CHARGING);		//switch to Charge State
 					break;
 				case 2: //Button
 					Display::Wake();
 					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
-					while(!Display::IsAnimationDone())
+					Button::Init();
+					while(!(Display::IsAnimationDone()) || Power::isCapLow())	//while animation not done or Cap Low
 					{
 						Display::Draw();
-						Timer::shortSleep(30);
+						Timer::shortSleep(30 + vol_low*60);	//Decrease Speed if Voltage Low
 					}
 					switchTo(STATE_ERROR);		//switch to Error State -> Display State
 					break;
@@ -513,7 +530,7 @@ void state_machine()
 						tryCounter--;
 						Power::setInputPower(0);
 						Led::Off();
-						Timer::shortSleep(5000);
+						Timer::shortSleep(10000);
 						switchTo(STATE_WAKEUP);	//unsuccessful, try again
 					}
 					else
@@ -670,6 +687,10 @@ void state_machine()
 				else if (Data::GetErrors() & _BV(Data::STATUS_P3_ERR))
 				{
 					status = Data::STATUS_P3_ERR;
+				}
+				else if (Data::GetErrors() & _BV(Data::STATUS_EP_ERR))
+				{
+					status = Data::STATUS_EP_ERR;
 				}
 				else
 				{	//no error

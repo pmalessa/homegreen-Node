@@ -17,17 +17,12 @@ void Power::Init() {
 
     EN_LOAD_PORT &= ~(_BV(EN_LOAD_PIN));						//turn off load
 
+	//Todo: replace this once PCB Updated
 	EN_CLK_DDR &= ~_BV(EN_CLK_PIN);	//set as input as its unused
 	DDRB |= _BV(PB1);
+
 	powerTimer.setTimeStep(10); //10 ms
 
-	//Init 1kHz Clock Timer, use Timer 1
-	TCCR1A = 0x00; TCCR1B = 0x00; TCCR1C = 0x00;		//Register zuruecksetzen
-	TCCR1A |= _BV(COM1A0);							//Toggle OC1A / CTC Mode OCR1A / Prescaler 8
-	TCCR1B |= _BV(WGM12) | _BV(CS11);
-	OCR1A = 125 - 1;									// 1000000 / 8 / 1000 = 125 -> 1000Hz
-	TIMSK1 = 0;											//No Interrupts
-	PRR &= ~_BV(PRTIM1);	//dont shut off Timer1
 	Power::Wakeup();
 }
 
@@ -114,6 +109,19 @@ bool Power::isCapNotFull()	//return if last measured CurVol lower than Cap Full 
 {
 	uint16_t curVol = adc2vol();
 	if(curVol < CAPNOTFULL)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+bool Power::isAboveEEPROMThreshold()
+{
+	uint16_t curVol = adc2vol();
+	if(curVol > EEP_LOWVOLTAGE)
 	{
 		return 1;
 	}

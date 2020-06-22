@@ -29,6 +29,7 @@ public:
 	}button_t;
 
 	static void Init();
+	static void DeInit();
 	static void SetCallback(void (*func)(void));
 	static button_press isPressed(button_t but);
 	static bool isAnyPressed();
