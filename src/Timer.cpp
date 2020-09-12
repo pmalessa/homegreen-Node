@@ -29,6 +29,7 @@ void Timer::shortSleep(uint32_t ms)
 	set_sleep_mode(SLEEP_MODE_IDLE);	//Sleep mode Idle
 	for(uint32_t i=0;i<ms;i++)
 	{
+		asm("wdr"); //reset watchdog
 		cli();									//disable interrupts
 		sleep_enable();							//enable sleep
 		sei();									//enable interrupts

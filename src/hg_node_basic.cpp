@@ -464,12 +464,12 @@ void state_machine()
 				first = 0;
 				checkCounter = 4;	//check every 250ms 4 times
 				Led::On(LED_GREEN);
-				Power::disableSolarCharger(true);	//disable Solar Charger and wait
-				Timer::shortSleep(500);
+				//Power::disableSolarCharger(true);	//disable Solar Charger and wait
+				//Timer::shortSleep(500);
 				Power::setLoad(1);
-				Timer::shortSleep(200);
+				Timer::shortSleep(100);
 				Power::setLoad(0);
-				Timer::shortSleep(200);
+				Timer::shortSleep(100);
 				Power::setInputPower(1);
 				Led::Off(LED_GREEN);
 			}
