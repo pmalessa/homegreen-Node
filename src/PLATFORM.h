@@ -15,16 +15,16 @@
 #include <avr/sleep.h>
 #include <stdlib.h>
 
-#define BUILD_DAY 22
-#define BUILD_MONTH 6
+#define BUILD_DAY 11
+#define BUILD_MONTH 9
 #define BUILD_YEAR 20
 #define BUILD_VERSION_MAJOR 1
 #define BUILD_VERSION_MINOR 4
-#define BUILD_VERSION_PATCH 2
+#define BUILD_VERSION_PATCH 3
 
-#define DEBUG1_DDR DDRD
-#define DEBUG1_PORT PORTD
-#define DEBUG1_PIN PD7
+#define DEBUG1_DDR DDRC
+#define DEBUG1_PORT PORTC
+#define DEBUG1_PIN PC0
 
 #define EN_PB_DDR DDRC
 #define EN_PB_PORT PORTC
@@ -51,26 +51,25 @@
 #define I2C_SDA_PORT PORTC
 #define I2C_SDA_PIN PC4
 
-#define EN_CLK_DDR DDRD
-#define EN_CLK_PORT PORTD
-#define EN_CLK_PIN PD0
+#define EN_CLK_DDR DDRB
+#define EN_CLK_PORT PORTB
+#define EN_CLK_PIN PB1
 
-#define LED_DDR DDRB
-#define LED_PORT PORTB
-#define LED_PIN PB2
+#define LED_RED_DDR DDRD
+#define LED_RED_PORT PORTD
+#define LED_RED_PIN PD7
+
+#define LED_GREEN_DDR DDRB
+#define LED_GREEN_PORT PORTB
+#define LED_GREEN_PIN PB2
+
+#define LED_BTN_DDR DDRB
+#define LED_BTN_PORT PORTB
+#define LED_BTN_PIN PB7
 
 #define PUMP_DDR DDRA
 #define PUMP_PORT PORTA
 #define PUMP_PIN PA1
-
-#define PUMP_SIG_DDR DDRC
-#define PUMP_SIG_PORT PORTC
-#define PUMP_SIG_PIN PC7
-#define PUMP_SIG_PINREG PINC
-
-#define PUMP_TEST_DDR DDRC
-#define PUMP_TEST_PORT PORTC
-#define PUMP_TEST_PIN PC0
 
 #define USB_OUT_M_DDR DDRC
 #define USB_OUT_M_PORT PORTC
@@ -82,15 +81,9 @@
 #define USB_OUT_P_PIN PB0
 #define USB_OUT_P_PINREG PINB
 
-#define USB_IN_M_DDR DDRB
-#define USB_IN_M_PORT PORTB
-#define USB_IN_M_PIN PB7
-#define USB_IN_M_PINREG PINB
-
-#define USB_IN_P_DDR DDRB
-#define USB_IN_P_PORT PORTB
-#define USB_IN_P_PIN PB6
-#define USB_IN_P_PINREG PINB
+#define USB_IN_SW_DDR DDRC
+#define USB_IN_SW_PORT PORTC
+#define USB_IN_SW_PIN PC7
 
 #define TM_OUT          PORTD
 #define TM_IN           PIND

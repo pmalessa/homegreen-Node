@@ -37,7 +37,7 @@ uint8_t checkCounter = 0, tryCounter = 3;	//try 3 times every 5 seconds, then Er
 uint8_t wakeReason = 0;
 Data::statusBit_t status;
 volatile uint8_t wdt_interrupt = 0;
-DeltaTimer buttonStepTimer, runtimeTimer, pumpCheckTimer;
+DeltaTimer buttonStepTimer, runtimeTimer;
 
 //Function Prototypes
 void state_machine();
@@ -135,7 +135,7 @@ void state_machine()
 
 	switch (state) {
 		case STATE_BOOT:
-			Led::Blink(2,100);
+			Led::Blink(LED_GREEN,2,100);
 			switchTo(STATE_SLEEP);		//-> Sleep State
 			break;
 		case STATE_DISPLAY:
@@ -388,6 +388,7 @@ void state_machine()
 			{
 				first = 0;
 				Display::Sleep();					//DeInit Display
+				Led::Off(LED_BTN);
 				if(Power::isPowerConnected() && Power::isCapNotFull())	//if Powerbank available and Cap not full
 				{
 					switchTo(STATE_CHARGING);							//charge cap before going to sleep
@@ -419,13 +420,13 @@ void state_machine()
 				wdt_interrupt = 0;
 				if(Data::GetErrors())	//if any error bit set
 				{
-					Led::Blink(3,50);	//blink error
+					Led::Blink(LED_RED,1,20);	//blink error
 				}
 				else
 				{
-					Led::Blink(1,20);	//blink okay
+					Led::Blink(LED_GREEN,1,20);	//blink okay
 				}
-				if(Data::getCountdown() == 0)		//if countdown reached
+				if(Data::getCountdown() == 0)	//if countdown reached
 				{
 					wakeReason = 0; //Reason Wakeup for Countdown
 					switchTo(STATE_WAKEUP);
@@ -436,7 +437,7 @@ void state_machine()
 					switchTo(STATE_WAKEUP);
 				}
 			}
-			else if(Button::isAnyPressed())			//button interrupt wakeup
+			else if(Button::isAnyPressed())	//button interrupt wakeup
 			{
 				wakeReason = 2; //Reason Wakeup for Button
 				switchTo(STATE_WAKEUP);
@@ -462,7 +463,7 @@ void state_machine()
 			{
 				first = 0;
 				checkCounter = 4;	//check every 250ms 4 times
-				Led::On();
+				Led::On(LED_GREEN);
 				Power::disableSolarCharger(true);	//disable Solar Charger and wait
 				Timer::shortSleep(500);
 				Power::setLoad(1);
@@ -470,7 +471,7 @@ void state_machine()
 				Power::setLoad(0);
 				Timer::shortSleep(200);
 				Power::setInputPower(1);
-				Led::Off();
+				Led::Off(LED_GREEN);
 			}
 			if(Power::isPowerConnected())
 			{
@@ -510,6 +511,7 @@ void state_machine()
 						Display::Draw();
 						Timer::shortSleep(30 + vol_low*60);	//Decrease Speed if Voltage Low
 					}
+					Led::On(LED_BTN);			//turn on Button LED
 					switchTo(STATE_ERROR);		//switch to Error State -> Display State
 					break;
 				default:
@@ -529,7 +531,7 @@ void state_machine()
 					{
 						tryCounter--;
 						Power::setInputPower(0);
-						Led::Off();
+						Led::Off(LED_GREEN);
 						Timer::shortSleep(10000);
 						switchTo(STATE_WAKEUP);	//unsuccessful, try again
 					}
@@ -559,7 +561,6 @@ void state_machine()
 				currentPump = 0;
 				Pump::setCountdown(Data::Get(Data::data_type_t(Data::DATA_DURATION1+currentPump))*6);
 				Pump::Start();		//enable Pump for specified duration
-				pumpCheckTimer.setTimeStep(3000);	//check Pump after 3 seconds
 			}
 			Display::ResetTimeout(); 						//Display always on
 			if(Pump::getCountdown() == 0)					//if pump duration reached, switch to Display State
@@ -576,7 +577,6 @@ void state_machine()
 						break;
 					}
 					Pump::setCurrentPump(currentPump);
-					pumpCheckTimer.reset(); //check Pump after 3 seconds
 					Pump::setCountdown(Data::Get(Data::data_type_t(Data::DATA_DURATION1+currentPump))*6);
 				}
 				else
@@ -587,23 +587,6 @@ void state_machine()
 					switchTo(STATE_DISPLAY);
 					break;
 				}
-			}
-
-			if(pumpCheckTimer.isTimeUp())
-			{
-				if(!Pump::isPumpConnected())	//if pump not connected
-				{
-					Display::ShowError((Data::statusBit_t)(Data::STATUS_P1_ERR+currentPump));
-					Data::SetError((Data::statusBit_t)(Data::STATUS_P1_ERR+currentPump));	//save error
-					Display::ForceDraw();
-					Timer::shortSleep(2000);
-					Pump::setCountdown(0); //stop current pump
-				}
-				else
-				{
-					pumpCheckTimer.setTimeStep(-1); //endless -> disable
-				}
-				
 			}
 
 			press = Button::isPressed(Button::BUTTON_MAN);
@@ -630,7 +613,6 @@ void state_machine()
 					currentPump++;
 					if(currentPump >2) currentPump=0;
 					Pump::setCurrentPump(currentPump);
-					pumpCheckTimer.reset();	//check Pump after 3 seconds
 				}
 			}
 			press = Button::isPressed(Button::BUTTON_PLUS);

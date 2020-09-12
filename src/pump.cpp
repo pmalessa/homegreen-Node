@@ -14,11 +14,6 @@ uint8_t Pump::currentPump = PUMP_1;
 void Pump::Init()
 {
 	PUMP_DDR |= _BV(PUMP_PIN);					//Set Pump Pin as Output
-	PUMP_TEST_DDR |= _BV(PUMP_TEST_PIN);		//Set Pump Test Pin as Output
-	PUMP_SIG_DDR &= ~_BV(PUMP_SIG_PIN);			//Set Pump Sig Pin as Input
-	PUMP_SIG_PORT |= _BV(PUMP_SIG_PIN);			//turn on Pump Sig Pin Pullup
-
-	PUMP_TEST_PORT &= ~_BV(PUMP_TEST_PIN);		//turn off Pump Test Pin
 	PUMP_PORT &= ~_BV(PUMP_PIN);				//turn off Pump Pin
 	pumpCounter = 0;
 	pumpTimer.setTimeStep(1000); 				//1 second
@@ -123,30 +118,6 @@ bool Pump::isHubConnected()
     {
         return false;
     }
-}
-
-bool Pump::isPumpConnected()
-{
-	return true;
-	/*
-	PUMP_PORT &= ~_BV(PUMP_PIN);	//turn off
-	PUMP_TEST_PORT |= _BV(PUMP_TEST_PIN);	//turn on test current limiter
-
-	_delay_ms(5000);	//wait 100ms
-
-	if(!(PUMP_SIG_PINREG & _BV(PUMP_SIG_PIN)))	//check if current limit reached, if pin low
-	{
-		PUMP_PORT |= _BV(PUMP_PIN);	//turn on
-		PUMP_TEST_PORT &= ~_BV(PUMP_TEST_PIN);	//turn off
-		return true;
-	}
-	else
-	{
-		PUMP_PORT |= _BV(PUMP_PIN);	//turn on
-		PUMP_TEST_PORT &= ~_BV(PUMP_TEST_PIN);	//turn off
-		return false;
-	}
-	*/
 }
 
 void Pump::setCurrentPump(uint8_t pumpID)
