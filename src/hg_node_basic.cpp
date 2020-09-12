@@ -27,7 +27,7 @@ typedef enum{
 	STATE_WAKEUP,
 	STATE_PUMPING,
 	STATE_INFO,
-	STATE_ERROR
+	STATE_SHOW_ERROR
 }state_t;
 state_t state = STATE_BOOT;
 
@@ -49,7 +49,6 @@ ISR(TIMER0_COMPA_vect) {	//250ms
 	{
 		cnt = 0;
 		wdt_interrupt = 1;
-		Data::decCountdown(8);
 	}
 }
 
@@ -111,7 +110,7 @@ int main (void) {
 			Data::Set(Data::DATA_TOTAL_RUNTIME,Data::Get(Data::DATA_TOTAL_RUNTIME)+1);
 			Data::Save();
 		}
-		Timer::shortSleep(10);
+		Timer::shortSleep(10);	//10ms delay
 	}
 }
 
@@ -417,6 +416,7 @@ void state_machine()
 
 			if(wdt_interrupt == 1)					//wdt interrupt wakeup
 			{
+				Data::decCountdown(8);
 				wdt_interrupt = 0;
 				if(Data::GetErrors())	//if any error bit set
 				{
@@ -512,7 +512,7 @@ void state_machine()
 						Timer::shortSleep(30 + vol_low*60);	//Decrease Speed if Voltage Low
 					}
 					Led::On(LED_BTN);			//turn on Button LED
-					switchTo(STATE_ERROR);		//switch to Error State -> Display State
+					switchTo(STATE_SHOW_ERROR);		//switch to Error State -> Display State
 					break;
 				default:
 					break;
@@ -650,7 +650,7 @@ void state_machine()
 			}
 			break;
 
-		case STATE_ERROR:
+		case STATE_SHOW_ERROR:
 			if(first)
 			{
 				first=0;
@@ -693,14 +693,14 @@ void state_machine()
 				Display::SetByte(4,0x50); //r
 				Display::SetByte(5,0x79); //E
 				fade();
-				switchTo(STATE_ERROR);		//switch to Error for next error
+				switchTo(STATE_SHOW_ERROR);		//switch to Error for next error
 				break;
 			}
 			//if any other button pressed
 			if(Button::isPressed(Button::BUTTON_PLUS) == Button::BUTTON_SHORT_PRESS || Button::isPressed(Button::BUTTON_SET) == Button::BUTTON_SHORT_PRESS || Button::isPressed(Button::BUTTON_MINUS) == Button::BUTTON_SHORT_PRESS)
 			{
 				Data::ClearError(status);
-				switchTo(STATE_ERROR);
+				switchTo(STATE_SHOW_ERROR);
 			}
 			break;
 		case STATE_INFO:

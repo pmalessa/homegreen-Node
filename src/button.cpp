@@ -44,6 +44,7 @@ void Button::Clear()
 		button[i].pressed = 0;
 		button[i].duration = 0;
 	}
+	anyPressed = false;
 }
 
 void Button::clearOtherThan(button_t but)
