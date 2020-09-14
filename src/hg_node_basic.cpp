@@ -37,18 +37,26 @@ uint8_t checkCounter = 0, tryCounter = 3;	//try 3 times every 5 seconds, then Er
 uint8_t wakeReason = 0;
 Data::statusBit_t status;
 volatile uint8_t wdt_interrupt = 0;
-DeltaTimer buttonStepTimer, runtimeTimer;
-
+DeltaTimer buttonStepTimer;
+volatile uint32_t currentRuntime = 0;	//runtime in seconds since last reset
 //Function Prototypes
 void state_machine();
 
 ISR(TIMER0_COMPA_vect) {	//250ms
 	static uint8_t cnt = 0;
+	static uint16_t totalRuntimeStep = 0;
 	cnt++;
-	if(cnt > 15)	//4x4 seconds = 16
+	if(cnt > 15)	//16x250ms = 4 seconds
 	{
 		cnt = 0;
 		wdt_interrupt = 1;
+		currentRuntime +=4;
+		totalRuntimeStep +=4;
+		if(totalRuntimeStep > 24*360) //0.1days = 2.4*3600 sec
+		{
+			totalRuntimeStep = 0;
+			Data::Set(Data::DATA_TOTAL_RUNTIME,Data::Get(Data::DATA_TOTAL_RUNTIME)+1);
+		}
 	}
 }
 
@@ -92,7 +100,6 @@ int main (void) {
 	DEBUG1_DDR |= _BV(DEBUG1_PIN);
 
 	buttonStepTimer.setTimeStep(100); //set step of long press
-	runtimeTimer.setTimeStep(8640000); //2.4h, 0.1 day
 
 	sei();
 
@@ -105,11 +112,6 @@ int main (void) {
 		Button::run();
 		Pump::run();
 		Temp::run();
-		if(runtimeTimer.isTimeUp())
-		{
-			Data::Set(Data::DATA_TOTAL_RUNTIME,Data::Get(Data::DATA_TOTAL_RUNTIME)+1);
-			Data::Save();
-		}
 		Timer::shortSleep(10);	//10ms delay
 	}
 }
@@ -153,6 +155,7 @@ void state_machine()
 				Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION1));
 				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
 				Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
+				Data::Save();
 			}
 			if(Display::IsTimeout())	//Display Timeout reached
 			{
@@ -230,7 +233,7 @@ void state_machine()
 			}
 			if(!Power::isPowerConnected()) //if power lost
 			{
-				Data::Save();
+				Data::setSavePending();
 				switchTo(STATE_SLEEP);
 				break;
 			}
@@ -334,7 +337,8 @@ void state_machine()
 			press = Button::isPressed(Button::BUTTON_SET);							//get Set Button Press
 			if((press == Button::BUTTON_LONG_PRESS) || Display::IsTimeout())	//Long Press or IDLE timeout, Config done
 			{
-				Data::Save();												//save to EEPROM
+				Data::setSavePending();										//save to EEPROM
+				Data::Save();
 				Display::DisableBlinking();
 				Data::resetCountdown();										//reset Countdown
 				fade();
@@ -447,15 +451,27 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
+				checkCounter = 60;	//charge for 60 seconds
 			}
-			if(Button::isAnyPressed())
+			if(Button::isAnyPressed())	//interrupt charging if button pressed
 			{
 				switchTo(STATE_WAKEUP);
 				break;
 			}
-			if(Power::isCapFull())
+			if(checkCounter%2)	//every 2 seconds, pulse load and blink
 			{
-				switchTo(STATE_SLEEP);
+				Power::setLoad(true);
+				Led::Blink(LED_GREEN,2,50);
+				Power::setLoad(false);
+			}
+			if(checkCounter)
+			{
+				checkCounter--;
+				Timer::shortSleep(1000);
+			}
+			else
+			{
+				switchTo(STATE_SLEEP);	//done charging
 			}
 			break;
 		case STATE_WAKEUP:
@@ -467,22 +483,26 @@ void state_machine()
 				//Power::disableSolarCharger(true);	//disable Solar Charger and wait
 				//Timer::shortSleep(500);
 				Power::setLoad(1);
-				Timer::shortSleep(100);
+				Timer::shortSleep(200);
 				Power::setLoad(0);
-				Timer::shortSleep(100);
+				Timer::shortSleep(200);
 				Power::setInputPower(1);
 				Led::Off(LED_GREEN);
 			}
 			if(Power::isPowerConnected())
 			{
-				uint8_t vol_low = !Power::isAboveEEPROMThreshold();
+				tryCounter = 3;	//reset trycounter
+				uint8_t vol_low = Power::isDeepDischarged();
 				//successfully woken up
 				if(vol_low)
 				{
 					Button::DeInit();	//reInit touch chip to prevent wrong button presses
 					Timer::shortSleep(200);
 				}
-				
+				else
+				{
+					Data::Save();
+				}
 				switch (wakeReason)
 				{
 				case 0: //Countdown
@@ -768,7 +788,7 @@ void state_machine()
 				}
 				break;
 			case 3: //Current Runtime in 4 digit hour and 1 decimal point hour
-				Display::Set4DigValue(0,Timer::getCurrentRuntime());
+				Display::Set4DigValue(0,currentRuntime/360);
 				Display::SetByte(5,0x74); //h
 				break;
 			case 4: //Total Runtime

@@ -27,6 +27,12 @@ uint8_t numToByteArray[] =
     0x07, // 7
     0x7F, // 8
     0x6F, // 9
+	0x77, // A
+	0x7C, // b
+	0x58, // c
+	0x5E, // d
+	0x79, // E
+	0x71  // F
 };
 
 #define PUMPANIMATION_FRAMES 4
@@ -182,7 +188,7 @@ void Display::SetByte(uint8_t pos, uint8_t byte)
 
 uint8_t Display::numToByte(uint8_t num)
 {
-	if(num < 10)
+	if(num < 16)
 	{
 		return numToByteArray[num];
 	}

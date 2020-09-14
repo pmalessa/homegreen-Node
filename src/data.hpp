@@ -47,6 +47,7 @@ public:
 	static void SetIgnoreError(statusBit_t bit);
 	static void SetTemp(temp_type_t temp_type, int16_t val);
 	static int16_t GetTemp(temp_type_t temp_type);
+	static void setSavePending();
 	static void Save();
 	static void Increment(data_type_t data_type);
 	static void Decrement(data_type_t data_type);
@@ -71,7 +72,7 @@ private:
 		ADR_STATUS = 0x16,
 		ADR_IGNORE_STATUS = 0x18,
 		ADR_EEP_VERSION = 0x30,
-		ADR_CRC = 0x32
+		ADR_CRC = 0x22
 	};
 	#define DATA_INIT_CONST 0xF00DBABE
 	#define DATA_INTERVAL_DEFAULT   77		//1..990 = 0.1..99.0
@@ -79,12 +80,12 @@ private:
 	#define DATA_DURATION2_DEFAULT  7		//1..990 = 0.1..99.0
 	#define DATA_DURATION3_DEFAULT  7		//1..990 = 0.1..99.0
 	#define DATA_SETUP_TEMP_DEFAULT 200		//200*0.1 deg C = 20 deg C
-	#define DATA_EEP_VERSION 10				//1.0
+	#define DATA_EEP_VERSION 11				//1.1
 
 	static uint16_t data[DATA_SIZE];
 	static int16_t tempdata[TEMPDATA_SIZE];
 	static uint32_t countdown;
-	static uint8_t status, ignoreStatus;
+	static uint8_t status, ignoreStatus, savePending;
 };
 
 

@@ -8,6 +8,7 @@
 #define LED_RED 1
 #define LED_GREEN 2
 #define LED_BTN 3
+#define LED_REDGREEN 4
 
 class Led
 {

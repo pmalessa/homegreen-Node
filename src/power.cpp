@@ -79,7 +79,7 @@ bool Power::isPowerConnected()	//check if the 5V Pin is high
 bool Power::isCapLow()	//return if last measured CurVol lower than Threshold
 {
 	uint16_t curVol = adc2vol();
-	if(curVol < LOWVOLTAGE)
+	if(curVol < POWER_LOWVOLTAGE)
 	{
 		return 1;
 	}
@@ -92,7 +92,7 @@ bool Power::isCapLow()	//return if last measured CurVol lower than Threshold
 bool Power::isCapFull()	//return if last measured CurVol higher than Cap Full High Threshold
 {
 	uint16_t curVol = adc2vol();
-	if(curVol > CAPFULL)
+	if(curVol > POWER_CAPFULL)
 	{
 		return 1;
 	}
@@ -105,7 +105,7 @@ bool Power::isCapFull()	//return if last measured CurVol higher than Cap Full Hi
 bool Power::isCapNotFull()	//return if last measured CurVol lower than Cap Full Lower Threshold
 {
 	uint16_t curVol = adc2vol();
-	if(curVol < CAPNOTFULL)
+	if(curVol < POWER_CAPNOTFULL)
 	{
 		return 1;
 	}
@@ -115,10 +115,10 @@ bool Power::isCapNotFull()	//return if last measured CurVol lower than Cap Full 
 	}
 }
 
-bool Power::isAboveEEPROMThreshold()
+bool Power::isDeepDischarged()
 {
 	uint16_t curVol = adc2vol();
-	if(curVol > EEP_LOWVOLTAGE)
+	if(curVol < POWER_DEEPVOLTAGE)
 	{
 		return 1;
 	}

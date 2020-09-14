@@ -39,6 +39,10 @@ void Led::On(uint8_t ledID)
     case LED_BTN:
         LED_BTN_PORT |= _BV(LED_BTN_PIN);    //LED high
         break;
+    case LED_REDGREEN:
+        LED_RED_PORT |= _BV(LED_RED_PIN);    //LED high
+        LED_GREEN_PORT |= _BV(LED_GREEN_PIN);    //LED high
+        break;
     }
 }
 void Led::Off(uint8_t ledID)
@@ -54,5 +58,8 @@ void Led::Off(uint8_t ledID)
     case LED_BTN:
         LED_BTN_PORT &= ~_BV(LED_BTN_PIN);    //LED high
         break;
+    case LED_REDGREEN:
+        LED_RED_PORT &= ~_BV(LED_RED_PIN);    //LED high
+        LED_GREEN_PORT &= ~_BV(LED_GREEN_PIN);    //LED high
     }
 }
