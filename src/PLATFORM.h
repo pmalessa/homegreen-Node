@@ -15,12 +15,12 @@
 #include <avr/sleep.h>
 #include <stdlib.h>
 
-#define BUILD_DAY 11
-#define BUILD_MONTH 9
-#define BUILD_YEAR 20
+#define BUILD_DAY 10
+#define BUILD_MONTH 05
+#define BUILD_YEAR 21
 #define BUILD_VERSION_MAJOR 1
 #define BUILD_VERSION_MINOR 4
-#define BUILD_VERSION_PATCH 3
+#define BUILD_VERSION_PATCH 6
 
 #define DEBUG1_DDR DDRC
 #define DEBUG1_PORT PORTC

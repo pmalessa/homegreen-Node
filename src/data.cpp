@@ -179,7 +179,7 @@ void Data::setSavePending()
 	savePending = true;
 }
 
-void Data::Save()
+void Data::SaveConfig()
 {
 	if(savePending)
 	{
@@ -201,6 +201,15 @@ void Data::Save()
 	}
 }
 
+void Data::SaveError()
+{
+	cli();
+	eeprom_update_word((uint16_t *)ADR_STATUS, status);	//save status
+	eeprom_update_word((uint16_t *)ADR_CRC, CalcCRC());	//save CRC
+	Led::Blink(LED_REDGREEN,1,50);
+	sei();
+}
+
 void Data::setDefault()
 {
 	Set(DATA_INTERVAL,DATA_INTERVAL_DEFAULT);	//set default values
@@ -211,4 +220,13 @@ void Data::setDefault()
 	status = 0;
 	ignoreStatus = 0;
 	savePending = true;
+}
+
+void Data::resetFromEEPROM()
+{
+	
+	data[DATA_INTERVAL] = eeprom_read_word((uint16_t *)ADR_INTERVAL);
+	data[DATA_DURATION1] = eeprom_read_word((uint16_t *)ADR_DURATION1);
+	data[DATA_DURATION2] = eeprom_read_word((uint16_t *)ADR_DURATION2);
+	data[DATA_DURATION3] = eeprom_read_word((uint16_t *)ADR_DURATION3);
 }

@@ -31,10 +31,22 @@ typedef enum{
 }state_t;
 state_t state = STATE_BOOT;
 
+typedef enum{
+	WAKESTAGE_FIRSTCHECK,
+	WAKESTAGE_SECONDWAKE
+}wakestage_t;
+
+typedef enum{
+	WAKEREASON_COUNTDOWN,
+	WAKEREASON_BUTTON,
+	WAKEREASON_CHARGING
+}wakereason_t;
+
 //Global Variables
 uint8_t first = 1;
-uint8_t checkCounter = 0, tryCounter = 3;	//try 3 times every 5 seconds, then Error
-uint8_t wakeReason = 0;
+uint8_t checkCounter = 3, tryCounter = 3;	//try 3 times every 5 seconds, then Error
+wakestage_t wakeupStage = WAKESTAGE_FIRSTCHECK;
+wakereason_t wakeReason = WAKEREASON_COUNTDOWN;
 Data::statusBit_t status;
 volatile uint8_t wdt_interrupt = 0;
 DeltaTimer buttonStepTimer;
@@ -155,11 +167,11 @@ void state_machine()
 				Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION1));
 				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
 				Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
-				Data::Save();
 			}
 			if(Display::IsTimeout())	//Display Timeout reached
 			{
 				fade();
+				Data::SaveConfig();	//if savePending, save data
 				switchTo(STATE_SLEEP);
 				break;
 			}
@@ -230,10 +242,10 @@ void state_machine()
 				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
 				Display::SetByte(4,0x73);	//P
 				Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
+				Data::SaveConfig();	//if savePending, save data
 			}
 			if(!Power::isPowerConnected()) //if power lost
 			{
-				Data::setSavePending();
 				switchTo(STATE_SLEEP);
 				break;
 			}
@@ -334,18 +346,27 @@ void state_machine()
 					break;
 				}
 			}
-			press = Button::isPressed(Button::BUTTON_SET);							//get Set Button Press
-			if((press == Button::BUTTON_LONG_PRESS) || Display::IsTimeout())	//Long Press or IDLE timeout, Config done
+			press = Button::isPressed(Button::BUTTON_SET);					//get Set Button Press
+			if((press == Button::BUTTON_LONG_PRESS))	//Long Press, Config done
 			{
 				Data::setSavePending();										//save to EEPROM
-				Data::Save();
+				Display::DisableBlinking();
+				Data::resetCountdown();										//reset Countdown
+				Data::SaveConfig();
+				fade();
+				switchTo(STATE_DISPLAY);									//switch to State Display
+				break;
+			}
+			else if(Display::IsTimeout())	//IDLE timeout, dont save
+			{
+				Data::resetFromEEPROM();									//load old values from EEPROM
 				Display::DisableBlinking();
 				Data::resetCountdown();										//reset Countdown
 				fade();
 				switchTo(STATE_DISPLAY);									//switch to State Display
 				break;
 			}
-			else if(press == Button::BUTTON_SHORT_PRESS)							//Short SET Press, switch selected Digit
+			else if(press == Button::BUTTON_SHORT_PRESS)					//Short SET Press, switch selected Digit
 			{
 				switch (curdigit)
 				{
@@ -432,18 +453,18 @@ void state_machine()
 				}
 				if(Data::getCountdown() == 0)	//if countdown reached
 				{
-					wakeReason = 0; //Reason Wakeup for Countdown
+					wakeReason = WAKEREASON_COUNTDOWN; //Reason Wakeup for Countdown
 					switchTo(STATE_WAKEUP);
 				}
 				if(Power::isCapLow())
 				{
-					wakeReason = 1; //Reason Wakeup for Charging
+					wakeReason = WAKEREASON_CHARGING; //Reason Wakeup for Charging
 					switchTo(STATE_WAKEUP);
 				}
 			}
 			else if(Button::isAnyPressed())	//button interrupt wakeup
 			{
-				wakeReason = 2; //Reason Wakeup for Button
+				wakeReason = WAKEREASON_BUTTON; //Reason Wakeup for Button
 				switchTo(STATE_WAKEUP);
 			}
 			break;
@@ -455,6 +476,7 @@ void state_machine()
 			}
 			if(Button::isAnyPressed())	//interrupt charging if button pressed
 			{
+				wakeReason = WAKEREASON_BUTTON;	//wake reason Button Press
 				switchTo(STATE_WAKEUP);
 				break;
 			}
@@ -478,20 +500,17 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				checkCounter = 4;	//check every 250ms 4 times
+				checkCounter = 3;	//check every 250ms 3 times
+				tryCounter = 3;	//try every 10s 3 times
+				wakeupStage = WAKESTAGE_FIRSTCHECK;
 				Led::On(LED_GREEN);
-				//Power::disableSolarCharger(true);	//disable Solar Charger and wait
-				//Timer::shortSleep(500);
-				Power::setLoad(1);
-				Timer::shortSleep(200);
-				Power::setLoad(0);
-				Timer::shortSleep(200);
+				Power::disableSolarCharger(true);	//disable Solar Charger and wait
+				Timer::shortSleep(300);
 				Power::setInputPower(1);
-				Led::Off(LED_GREEN);
 			}
 			if(Power::isPowerConnected())
 			{
-				tryCounter = 3;	//reset trycounter
+				Led::Off(LED_GREEN);
 				uint8_t vol_low = Power::isDeepDischarged();
 				//successfully woken up
 				if(vol_low)
@@ -499,13 +518,9 @@ void state_machine()
 					Button::DeInit();	//reInit touch chip to prevent wrong button presses
 					Timer::shortSleep(200);
 				}
-				else
-				{
-					Data::Save();
-				}
 				switch (wakeReason)
 				{
-				case 0: //Countdown
+				case WAKEREASON_COUNTDOWN:
 					Display::Wake();
 					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
@@ -517,11 +532,11 @@ void state_machine()
 					}
 					switchTo(STATE_PUMPING);		//switch to Pump State
 					break;
-				case 1: //Charging
+				case WAKEREASON_CHARGING:
 					Button::Init();
 					switchTo(STATE_CHARGING);		//switch to Charge State
 					break;
-				case 2: //Button
+				case WAKEREASON_BUTTON:
 					Display::Wake();
 					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
@@ -540,28 +555,56 @@ void state_machine()
 			}
 			else
 			{
-				if(checkCounter)
+				switch (wakeupStage)
 				{
-					checkCounter--;
-					Timer::shortSleep(250);
-				}
-				else
-				{
+				case WAKESTAGE_FIRSTCHECK:
+					if(checkCounter)
+					{
+						Power::setLoad(1);
+						Timer::shortSleep(200);
+						Power::setLoad(0);
+						Timer::shortSleep(100);
+						checkCounter--;
+					}
+					else
+					{
+						wakeupStage = WAKESTAGE_SECONDWAKE;
+						Power::setInputPower(0);
+						Led::Off(LED_GREEN);
+						Timer::shortSleep(800);
+						Led::On(LED_GREEN);
+						Power::setInputPower(1);
+						Timer::shortSleep(200);
+					}
+					break;
+				case WAKESTAGE_SECONDWAKE:
 					if(tryCounter)
 					{
 						tryCounter--;
 						Power::setInputPower(0);
 						Led::Off(LED_GREEN);
 						Timer::shortSleep(10000);
-						switchTo(STATE_WAKEUP);	//unsuccessful, try again
+						Led::On(LED_GREEN);
+						Power::setInputPower(1);
+						Power::setLoad(1);
+						Timer::shortSleep(200);
+						Power::setLoad(0);
+						Timer::shortSleep(100);
 					}
 					else
 					{
-						tryCounter = 3;	//reset tryCounter
+						Led::Off(LED_GREEN);
+						Power::setInputPower(0);
+						Power::disableSolarCharger(false);
 						Data::SetError(Data::STATUS_PB_ERR);	//save error
-						if(wakeReason == 0) Data::setCustomCountdown(300);	//if wakeReason was Countdown, try 5 minutes later, as it is urgent
+						if(!Power::isCapLow()){	//if enough power, save flag
+							Data::SaveError();
+						}
+						if(wakeReason == WAKEREASON_COUNTDOWN) 
+							Data::setCustomCountdown(300);	//if wakeReason was Countdown, try 5 minutes later, as it is urgent
 						switchTo(STATE_SLEEP);	//back to sleep
 					}
+					break;
 				}
 			}
 			break;
@@ -665,6 +708,10 @@ void state_machine()
 				Pump::Stop();
 				Display::StopAnimation();
 				Data::SetError(Data::STATUS_PB_ERR);
+				if(!Power::isCapLow())
+				{
+					Data::SaveError();
+				}
 				switchTo(STATE_SLEEP);
 				break;
 			}

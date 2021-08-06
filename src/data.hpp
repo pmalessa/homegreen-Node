@@ -48,7 +48,8 @@ public:
 	static void SetTemp(temp_type_t temp_type, int16_t val);
 	static int16_t GetTemp(temp_type_t temp_type);
 	static void setSavePending();
-	static void Save();
+	static void SaveConfig();
+	static void SaveError();
 	static void Increment(data_type_t data_type);
 	static void Decrement(data_type_t data_type);
 	static void decCountdown(uint8_t sec);
@@ -57,6 +58,7 @@ public:
 	static void resetCountdown();
 	static void setCustomCountdown(uint32_t sec);
 	static void setDefault();
+	static void resetFromEEPROM();
 
 private:
 	enum data_adr{
