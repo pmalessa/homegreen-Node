@@ -6,8 +6,6 @@
 * Target:   any AVR device with hardware TWI 
 * Usage:    API compatible with I2C Software Library i2cmaster.h
 **************************************************************************/
-#include <inttypes.h>
-#include <compat/twi.h>
 
 #include "i2cmaster.h"
 
@@ -20,6 +18,16 @@
 /* I2C clock in Hz */
 #define SCL_CLOCK  10000L
 
+//from #include <compat/twi.h>
+#define TW_STATUS_MASK		(_BV(TWS7)|_BV(TWS6)|_BV(TWS5)|_BV(TWS4)|_BV(TWS3))
+#define TW_STATUS		(TWSR & TW_STATUS_MASK)
+#define TW_START		0x08
+#define TW_REP_START		0x10
+#define TW_MT_SLA_ACK		0x18
+#define TW_MR_SLA_ACK		0x40
+#define TW_MT_SLA_NACK		0x20
+#define TW_MR_DATA_NACK		0x58
+#define TW_MT_DATA_ACK		0x28
 
 /*************************************************************************
  Initialization of the I2C bus interface. Need to be called only once
@@ -29,7 +37,7 @@ void i2c_init(void)
   /* initialize TWI clock: 100 kHz clock, TWPS = 0 => prescaler = 1 */
   
   TWSR = 0;                         /* no prescaler */
-  TWBR = (100-16)/2;//((F_CPU/SCL_CLOCK)-16)/2;  /* must be > 10 for stable operation */
+  TWBR = (100-16)>>1;//((F_CPU/SCL_CLOCK)-16)/2;  /* must be > 10 for stable operation */
 
 }/* i2c_init */
 
