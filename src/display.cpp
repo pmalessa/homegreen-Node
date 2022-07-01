@@ -175,14 +175,7 @@ void Display::Set4DigValue(uint8_t position, uint32_t val)
 
 void Display::SetByte(uint8_t pos, uint8_t byte)
 {
-	if(byte & DEC_DOT)
-	{
-		setDot(pos,1);
-	}
-	else
-	{
-		setDot(pos,0);
-	}
+	setDot(pos,byte&DEC_DOT);
 	dig[pos]=byte;
 }
 
@@ -194,11 +187,8 @@ uint8_t Display::numToByte(uint8_t num)
 //0..7
 void Display::SetBrightness(uint8_t val)
 {
-	if(val < 8)
-	{
-		brightness = val;
-		tm1637_setBrightness(val);
-	}
+	brightness = val&0x7;
+	tm1637_setBrightness(brightness);
 }
 
 void Display::EnableBlinking(digit_t digit)
