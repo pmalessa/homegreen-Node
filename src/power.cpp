@@ -8,7 +8,6 @@ DeltaTimer Power::powerTimer;
 
 void Power::Init() {
 	EN_PB_DDR |= _BV(EN_PB_PIN);
-	USB_IN_SW_DDR |= _BV(USB_IN_SW_PIN);
 	EN_PB_DDR |= _BV(EN_PB_PIN);
     EN_LOAD_DDR |= _BV(EN_LOAD_PIN);
     CHK_5V_DDR &= ~(_BV(CHK_5V_PIN)); 							//digital input
@@ -37,19 +36,6 @@ void Power::Wakeup()
 	currentCapVoltage = ADC;	//scrap measurement
 
 	adcStable = false;
-}
-
-void Power::disableSolarCharger(uint8_t state)
-{
-	if(state == true)
-	{
-		USB_IN_SW_PORT |= _BV(USB_IN_SW_PIN);		//turn off Charger
-	}
-	else
-	{
-		USB_IN_SW_PORT &= ~_BV(USB_IN_SW_PIN); 	//turn on Charger
-	}
-	
 }
 
 void Power::Sleep()

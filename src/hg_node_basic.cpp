@@ -109,8 +109,6 @@ int main (void) {
 	Display::Init();
 	Temp::Init();
 
-	DEBUG1_DDR |= _BV(DEBUG1_PIN);
-
 	buttonStepTimer.setTimeStep(100); //set step of long press
 
 	sei();
@@ -419,12 +417,10 @@ void state_machine()
 					break;
 				}
 				Power::setInputPower(0);			//disable Powerbank
-				Power::disableSolarCharger(false);	//reenable Solar Charger
 			}
 			Temp::Sleep();
 			Power::Sleep();
 			Timer::Sleep();
-			DEBUG1_PORT &= ~(_BV(DEBUG1_PIN));
 		    set_sleep_mode(SLEEP_MODE_IDLE);		//Sleep mode Idle: using Timer Clock for Voltage Doubler
 			wdt_interrupt = 0;						//clear open interrupts
 		    cli();									//disable interrupts
@@ -434,7 +430,6 @@ void state_machine()
 			/*zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz*/
 			//waked up
 			sleep_disable();						//disable sleep
-			DEBUG1_PORT |= (_BV(DEBUG1_PIN));
 			Timer::Wakeup();
 			Power::Wakeup();
 			sei();									//enable interrupts
@@ -504,8 +499,6 @@ void state_machine()
 				tryCounter = 3;	//try every 10s 3 times
 				wakeupStage = WAKESTAGE_FIRSTCHECK;
 				Led::On(LED_GREEN);
-				Power::disableSolarCharger(true);	//disable Solar Charger and wait
-				Timer::shortSleep(300);
 				Power::setInputPower(1);
 			}
 			if(Power::isPowerConnected())
@@ -595,7 +588,6 @@ void state_machine()
 					{
 						Led::Off(LED_GREEN);
 						Power::setInputPower(0);
-						Power::disableSolarCharger(false);
 						Data::SetError(Data::STATUS_PB_ERR);	//save error
 						if(!Power::isCapLow()){	//if enough power, save flag
 							Data::SaveError();
