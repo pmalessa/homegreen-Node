@@ -15,6 +15,12 @@ void Pump::Init()
 {
 	PUMP_DDR |= _BV(PUMP_PIN);					//Set Pump Pin as Output
 	PUMP_PORT &= ~_BV(PUMP_PIN);				//turn off Pump Pin
+
+	PUMP_VOL_DDR |= _BV(PUMP_VOL_PIN);			//Set Pump Voltage Pin as Output
+	PUMP_VOL_PORT &= ~_BV(PUMP_VOL_PIN);		//set Pump Voltage Pin low
+
+	PUMP_CUR_DDR &= ~_BV(PUMP_CUR_PIN);			//pump current pin as input
+
 	pumpCounter = 0;
 	pumpTimer.setTimeStep(1000); 				//1 second
 	currentPump = PUMP_1;

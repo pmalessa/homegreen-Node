@@ -112,15 +112,15 @@ void Display::SetValue(digit_t digit, uint16_t val)
 	}
 	if(val > 99) //higher than 9.9
 	{
-		SetByte(d,numToByteArray[val/100]);
-		SetByte(d+1,numToByteArray[(val%100)/10]);
+		SetByte(d,numToByte(val/100));
+		SetByte(d+1,numToByte((val%100)/10));
 		setDot(d, 0);
 		setDot(d+1, 1);	//dot at second position
 	}
 	else
 	{
-		SetByte(d,numToByteArray[val/10]);
-		SetByte(d+1,numToByteArray[val%10]);
+		SetByte(d,numToByte(val/10));
+		SetByte(d+1,numToByte(val%10));
 		setDot(d, 1);	//dot at first position
 		setDot(d+1, 0);
 	}
@@ -150,9 +150,9 @@ void Display::SetNegValue(uint8_t position, int16_t val)
 		SetByte(position,0x00);	//Positive, nothing
 	}
 	
-	SetByte(position+1,numToByteArray[val/100]);
-	SetByte(position+2,numToByteArray[(val%100)/10]);
-	SetByte(position+3,numToByteArray[val%10]);
+	SetByte(position+1,numToByte(val/100));
+	SetByte(position+2,numToByte((val%100)/10));
+	SetByte(position+3,numToByte(val%10));
 	setDot(position+2, 1);	//dot at second position
 }
 
@@ -165,44 +165,30 @@ void Display::Set4DigValue(uint8_t position, uint32_t val)
 	{
 		val = 99999;
 	}
-	SetByte(position,numToByteArray[val/10000]);
-	SetByte(position+1,numToByteArray[(val%10000)/1000]);
-	SetByte(position+2,numToByteArray[(val%1000)/100]);
-	SetByte(position+3,numToByteArray[(val%100)/10]);
-	SetByte(position+4,numToByteArray[val%10]);
+	SetByte(position,numToByte(val/10000));
+	SetByte(position+1,numToByte((val%10000)/1000));
+	SetByte(position+2,numToByte((val%1000)/100));
+	SetByte(position+3,numToByte((val%100)/10));
+	SetByte(position+4,numToByte(val%10));
 	setDot(position+3, 1);	//dot at third position
 }
 
 void Display::SetByte(uint8_t pos, uint8_t byte)
 {
-	if(byte & DEC_DOT)
-	{
-		setDot(pos,1);
-	}
-	else
-	{
-		setDot(pos,0);
-	}
+	setDot(pos,byte&DEC_DOT);
 	dig[pos]=byte;
 }
 
 uint8_t Display::numToByte(uint8_t num)
 {
-	if(num < 16)
-	{
-		return numToByteArray[num];
-	}
-	return 0;
+	return numToByteArray[num&0xF];
 }
 
 //0..7
 void Display::SetBrightness(uint8_t val)
 {
-	if(val < 8)
-	{
-		brightness = val;
-		tm1637_setBrightness(val);
-	}
+	brightness = val&0x7;
+	tm1637_setBrightness(brightness);
 }
 
 void Display::EnableBlinking(digit_t digit)

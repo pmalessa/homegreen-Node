@@ -55,14 +55,7 @@ public:
 private:
     static void setDot(uint8_t dot_pos, uint8_t val) //left to right
     {
-	    if(val)
-	    {
-		    dotmask |= _BV(dot_pos);
-	    }
-	    else
-	    {
-		    dotmask &= ~_BV(dot_pos);
-	    }
+	    (val>0)?dotmask |= _BV(dot_pos):dotmask &= ~_BV(dot_pos);
     }
     static void dsend(uint8_t pos, uint8_t byte)
     {

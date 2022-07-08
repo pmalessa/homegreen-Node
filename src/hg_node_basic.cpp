@@ -85,7 +85,21 @@ void anypress_callback()	//called if any Button pressed or released
 	Display::ResetTimeout();
 }
 
-//mööp 1 otterdamoo <3
+static void __attribute__((noreturn))
+main_loop (void)
+{
+	while(1)
+	{
+		asm("wdr"); //reset watchdog
+		state_machine();
+		Display::Draw();
+		Power::run();
+		Button::run();
+		Pump::run();
+		Temp::run();
+		Timer::shortSleep(10);	//10ms delay
+	}
+}
 
 int main (void) {
 	//watchdog init
@@ -113,17 +127,7 @@ int main (void) {
 
 	sei();
 
-	while(1)
-	{
-		asm("wdr"); //reset watchdog
-		state_machine();
-		Display::Draw();
-		Power::run();
-		Button::run();
-		Pump::run();
-		Temp::run();
-		Timer::shortSleep(10);	//10ms delay
-	}
+	main_loop();
 }
 
 void fade()
