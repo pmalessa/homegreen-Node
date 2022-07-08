@@ -132,7 +132,7 @@ void Data::SetIgnoreError(statusBit_t bit)
 
 void Data::SetPumpStrength(uint8_t id, uint8_t strength)
 {
-	statusAndStrength.strength |= (strength << (id << 1));
+	statusAndStrength.strength = (strength << (id << 1));
 	savePending = true;
 }
 

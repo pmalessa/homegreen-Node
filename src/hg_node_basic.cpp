@@ -272,6 +272,10 @@ void state_machine()
 						Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 						Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 						break;
+#ifdef FEATURE_PUMP_STRENGTH
+					case DIGIT_PUMP_STRENGTH:
+						break;
+#endif
 					}
 				}
 			}
@@ -294,6 +298,12 @@ void state_machine()
 					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 					Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 					break;
+#ifdef FEATURE_PUMP_STRENGTH
+				case DIGIT_PUMP_STRENGTH:
+					Data::SetPumpStrength(currentPump,(Data::GetPumpStrength(currentPump)+1)%3);
+					Display::SetByte(3,Display::numToByte(Data::GetPumpStrength(currentPump)));
+					break;
+#endif
 				}
 			}
 			
@@ -321,6 +331,10 @@ void state_machine()
 						Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 						Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 						break;
+#ifdef FEATURE_PUMP_STRENGTH
+					case DIGIT_PUMP_STRENGTH:
+						break;
+#endif
 					}
 				}
 			}
@@ -343,6 +357,13 @@ void state_machine()
 					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 					Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 					break;
+#ifdef FEATURE_PUMP_STRENGTH
+				case DIGIT_PUMP_STRENGTH:
+					if(Data::GetPumpStrength(currentPump) == 0){Data::SetPumpStrength(currentPump,2);}
+					else{Data::SetPumpStrength(currentPump,Data::GetPumpStrength(currentPump)-1);}
+					Display::SetByte(3,Display::numToByte(Data::GetPumpStrength(currentPump)));
+					break;
+#endif
 				}
 			}
 			press = Button::isPressed(Button::BUTTON_SET);					//get Set Button Press
@@ -379,14 +400,44 @@ void state_machine()
 					}
 					else
 					{
+#ifdef FEATURE_PUMP_STRENGTH
+						curdigit = DIGIT_PUMP_STRENGTH;
+						Display::SetByte(0,0x73);	//P
+						Display::SetByte(1,0x6D);	//S
+						Display::SetByte(2,Display::numToByte(0));
+						Display::SetByte(3,Display::numToByte(Data::GetPumpStrength(currentPump)));
+#else
 						curdigit = DIGIT_INTERVAL;
+#endif
 					}
 					break;
 				case DIGIT_COUNTDOWN:
-					curdigit = DIGIT_INTERVAL;
+#ifdef FEATURE_PUMP_STRENGTH
+					curdigit = DIGIT_PUMP_STRENGTH;
+					Display::SetByte(0,0x73);	//P
+					Display::SetByte(1,0x6D);	//S
+					Display::SetByte(2,Display::numToByte(0));
+					Display::SetByte(3,Display::numToByte(Data::GetPumpStrength(currentPump)));
 					break;
+				case DIGIT_PUMP_STRENGTH:
+					curdigit = DIGIT_INTERVAL;
+					Display::SetValue(DIGIT_INTERVAL,Data::Get((Data::data_type_t)DIGIT_INTERVAL));
+					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
+					break;
+#else
+					curdigit = DIGIT_INTERVAL;
+#endif
 				}
+#ifdef FEATURE_PUMP_STRENGTH
+				if (curdigit == DIGIT_PUMP_STRENGTH)
+				{
+					Display::EnableBlinking(DIGIT_DURATION);
+				}else{
+					Display::EnableBlinking(curdigit);
+				}
+#else
 				Display::EnableBlinking(curdigit);
+#endif
 			}
 			press = Button::isPressed(Button::BUTTON_MAN);							//get Button MAN Press
 			if(press == Button::BUTTON_LONG_PRESS)	//if long Press

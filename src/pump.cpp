@@ -16,10 +16,13 @@ void Pump::Init()
 	PUMP_DDR |= _BV(PUMP_PIN);					//Set Pump Pin as Output
 	PUMP_PORT &= ~_BV(PUMP_PIN);				//turn off Pump Pin
 
+#ifdef FEATURE_PUMP_STRENGTH
 	PUMP_VOL_DDR |= _BV(PUMP_VOL_PIN);			//Set Pump Voltage Pin as Output
 	PUMP_VOL_PORT &= ~_BV(PUMP_VOL_PIN);		//set Pump Voltage Pin low
-
+#endif
+#ifdef FEATURE_PUMP_SENSOR
 	PUMP_CUR_DDR &= ~_BV(PUMP_CUR_PIN);			//pump current pin as input
+#endif
 
 	pumpCounter = 0;
 	pumpTimer.setTimeStep(1000); 				//1 second
@@ -34,6 +37,18 @@ void Pump::Init()
 
 void Pump::run()
 {
+	switch (Data::GetPumpStrength(currentPump))
+	{
+	case 0:
+		PUMP_VOL_PORT |= _BV(PUMP_VOL_PIN); //turn high for low strength
+		break;
+	case 1:
+		PUMP_VOL_PORT ^= _BV(PUMP_VOL_PIN); //toggle for medium strength
+		break;
+	case 2:
+		PUMP_VOL_PORT &= ~_BV(PUMP_VOL_PIN); //turn low for high strength
+		break;
+	}
 	if(pumpTimer.isTimeUp()) //1000ms
 	{
 		if(pumpCounter > 0)	//if enabled

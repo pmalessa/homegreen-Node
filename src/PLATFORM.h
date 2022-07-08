@@ -25,6 +25,7 @@
 #ifdef HG_BASIC_HW_1_4_4
 
 #define FEATURE_PUMP_STRENGTH
+#define FEATURE_PUMP_SENSOR
 
 #define CHK_5V_DDR DDRA
 #define CHK_5V_PORT PORTA
@@ -183,6 +184,9 @@ typedef enum{
 	DIGIT_INTERVAL,
 	DIGIT_DURATION,
 	DIGIT_COUNTDOWN,
+#ifdef FEATURE_PUMP_STRENGTH
+	DIGIT_PUMP_STRENGTH,
+#endif
 }digit_t;
 
 #define UNUSED(x) (void)(x)
