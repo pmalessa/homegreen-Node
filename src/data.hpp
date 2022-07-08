@@ -37,6 +37,15 @@ public:
 		STATUS_EP_ERR,
 	}statusBit_t;
 
+	union statusAndStrengthUnion
+	{
+		struct{
+			uint8_t strength;
+			uint8_t status;
+		};
+		uint16_t raw;
+	};
+
 	static void Init();
 	static uint16_t CalcCRC();
 	static void Set(data_type_t data_type, uint16_t val);
@@ -45,6 +54,8 @@ public:
 	static void ClearError(statusBit_t bit);
 	static uint8_t GetErrors();
 	static void SetIgnoreError(statusBit_t bit);
+	static void SetPumpStrength(uint8_t id, uint8_t strength);
+	static uint8_t GetPumpStrength(uint8_t id);
 	static void SetTemp(temp_type_t temp_type, int16_t val);
 	static int16_t GetTemp(temp_type_t temp_type);
 	static void setSavePending();
@@ -87,7 +98,8 @@ private:
 	static uint16_t data[DATA_SIZE];
 	static int16_t tempdata[TEMPDATA_SIZE];
 	static uint32_t countdown;
-	static uint8_t status, ignoreStatus, savePending;
+	static uint8_t ignoreStatus, savePending;
+	static statusAndStrengthUnion statusAndStrength;
 };
 
 

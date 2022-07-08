@@ -23,6 +23,9 @@
 #define BUILD_VERSION_PATCH 7
 
 #ifdef HG_BASIC_HW_1_4_4
+
+#define FEATURE_PUMP_STRENGTH
+
 #define CHK_5V_DDR DDRA
 #define CHK_5V_PORT PORTA
 #define CHK_5V_PIN PA0
@@ -179,7 +182,10 @@ typedef struct{
 typedef enum{
 	DIGIT_INTERVAL,
 	DIGIT_DURATION,
-	DIGIT_COUNTDOWN
+	DIGIT_COUNTDOWN,
+#ifdef FEATURE_PUMP_STRENGTH
+	DIGIT_PUMP_STRENGTH,
+#endif
 }digit_t;
 
 #define UNUSED(x) (void)(x)

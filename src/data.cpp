@@ -13,7 +13,8 @@
 uint16_t Data::data[DATA_SIZE] = {0};
 int16_t Data::tempdata[TEMPDATA_SIZE] = {0};
 uint32_t Data::countdown = 0;
-uint8_t Data::status = 0, Data::ignoreStatus = 0, Data::savePending = false;
+uint8_t Data::ignoreStatus = 0, Data::savePending = false;
+Data::statusAndStrengthUnion Data::statusAndStrength = {0};
 
 void Data::Init()
 {
@@ -32,7 +33,7 @@ void Data::Init()
 	data[DATA_DURATION3] = eeprom_read_word((uint16_t *)ADR_DURATION3);
 	data[DATA_TOTAL_RUNTIME] = eeprom_read_word((uint16_t *)ADR_TOTAL_RUNTIME);
 	tempdata[DATA_SETUP_TEMP] = eeprom_read_word((uint16_t *)ADR_SETUP_TEMP);
-	status = eeprom_read_word((uint16_t *)ADR_STATUS);
+	statusAndStrength.raw = eeprom_read_word((uint16_t *)ADR_STATUS);
 	ignoreStatus = eeprom_read_word((uint16_t *)ADR_IGNORE_STATUS);
 
 	//IF CRC not correct, reset Data
@@ -121,18 +122,18 @@ void Data::SetError(statusBit_t bit)
 	{
 		return;
 	}
-	status |= _BV(bit);
+	statusAndStrength.status |= _BV(bit);
 	savePending = true;
 }
 
 uint8_t Data::GetErrors()
 {
-	return status;
+	return statusAndStrength.status;
 }
 
 void Data::ClearError(statusBit_t bit)
 {
-	status &= ~_BV(bit);
+	statusAndStrength.status &= ~_BV(bit);
 	savePending = true;
 }
 
@@ -140,6 +141,17 @@ void Data::SetIgnoreError(statusBit_t bit)
 {
 	ignoreStatus |= _BV(bit);
 	savePending = true;
+}
+
+void Data::SetPumpStrength(uint8_t id, uint8_t strength)
+{
+	statusAndStrength.strength |= (strength << (id << 1));
+	savePending = true;
+}
+
+uint8_t Data::GetPumpStrength(uint8_t id)
+{
+	return (statusAndStrength.strength >> (id << 1))&0x03;
 }
 
 void Data::decCountdown(uint8_t sec)
@@ -191,7 +203,7 @@ void Data::SaveConfig()
 		eeprom_update_word((uint16_t *)ADR_DURATION3, data[DATA_DURATION3]);		//save duration
 		eeprom_update_word((uint16_t *)ADR_TOTAL_RUNTIME, data[DATA_TOTAL_RUNTIME]);		//save total runtime
 		eeprom_update_word((uint16_t *)ADR_SETUP_TEMP, tempdata[DATA_SETUP_TEMP]);	//save setup temp
-		eeprom_update_word((uint16_t *)ADR_STATUS, status);	//save status
+		eeprom_update_word((uint16_t *)ADR_STATUS, statusAndStrength.raw);	//save status
 		eeprom_update_word((uint16_t *)ADR_IGNORE_STATUS, ignoreStatus);	//save ignoreStatus
 		eeprom_update_word((uint16_t *)ADR_EEP_VERSION, DATA_EEP_VERSION);	//save EEPROM Version
 		eeprom_update_word((uint16_t *)ADR_CRC, CalcCRC());	//save CRC
@@ -204,7 +216,7 @@ void Data::SaveConfig()
 void Data::SaveError()
 {
 	cli();
-	eeprom_update_word((uint16_t *)ADR_STATUS, status);	//save status
+	eeprom_update_word((uint16_t *)ADR_STATUS, statusAndStrength.raw);	//save status
 	eeprom_update_word((uint16_t *)ADR_CRC, CalcCRC());	//save CRC
 	Led::Blink(LED_REDGREEN,1,50);
 	sei();
@@ -217,7 +229,7 @@ void Data::setDefault()
 	Set(DATA_DURATION2,DATA_DURATION2_DEFAULT);
 	Set(DATA_DURATION3,DATA_DURATION3_DEFAULT);
 	SetTemp(DATA_SETUP_TEMP,DATA_SETUP_TEMP_DEFAULT);
-	status = 0;
+	statusAndStrength.raw = 0;
 	ignoreStatus = 0;
 	savePending = true;
 }
