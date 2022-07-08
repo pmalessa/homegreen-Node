@@ -24,12 +24,6 @@ public:
 	}data_type_t;
 
 	typedef enum{
-		DATA_SETUP_TEMP,
-		DATA_CURRENT_TEMP,
-		TEMPDATA_SIZE
-	}temp_type_t;
-
-	typedef enum{
 		STATUS_PB_ERR = 1,
 		STATUS_P1_ERR,
 		STATUS_P2_ERR,
@@ -56,8 +50,6 @@ public:
 	static void SetIgnoreError(statusBit_t bit);
 	static void SetPumpStrength(uint8_t id, uint8_t strength);
 	static uint8_t GetPumpStrength(uint8_t id);
-	static void SetTemp(temp_type_t temp_type, int16_t val);
-	static int16_t GetTemp(temp_type_t temp_type);
 	static void setSavePending();
 	static void SaveConfig();
 	static void SaveError();
@@ -79,8 +71,6 @@ private:
 		ADR_DURATION2 = 0x08,
 		ADR_DURATION3 = 0x0A,
 		ADR_TIME_COUNTER = 0x0C,
-		ADR_SETUP_TEMP = 0x10,
-		ADR_CURRENT_TEMP = 0x12,
 		ADR_TOTAL_RUNTIME = 0x14,
 		ADR_STATUS = 0x16,
 		ADR_IGNORE_STATUS = 0x18,
@@ -92,11 +82,9 @@ private:
 	#define DATA_DURATION1_DEFAULT  7		//1..990 = 0.1..99.0
 	#define DATA_DURATION2_DEFAULT  7		//1..990 = 0.1..99.0
 	#define DATA_DURATION3_DEFAULT  7		//1..990 = 0.1..99.0
-	#define DATA_SETUP_TEMP_DEFAULT 200		//200*0.1 deg C = 20 deg C
 	#define DATA_EEP_VERSION 11				//1.1
 
 	static uint16_t data[DATA_SIZE];
-	static int16_t tempdata[TEMPDATA_SIZE];
 	static uint32_t countdown;
 	static uint8_t ignoreStatus, savePending;
 	static statusAndStrengthUnion statusAndStrength;

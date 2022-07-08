@@ -5,7 +5,6 @@
 #include "pump.hpp"
 #include "power.hpp"
 #include "data.hpp"
-#include "temp.hpp"
 #include "button.hpp"
 #include "Led.hpp"
 
@@ -96,7 +95,6 @@ main_loop (void)
 		Power::run();
 		Button::run();
 		Pump::run();
-		Temp::run();
 		Timer::shortSleep(10);	//10ms delay
 	}
 }
@@ -121,7 +119,6 @@ int main (void) {
 	Power::Init();
 	Data::Init();
 	Display::Init();
-	Temp::Init();
 
 	buttonStepTimer.setTimeStep(100); //set step of long press
 
@@ -422,7 +419,6 @@ void state_machine()
 				}
 				Power::setInputPower(0);			//disable Powerbank
 			}
-			Temp::Sleep();
 			Power::Sleep();
 			Timer::Sleep();
 		    set_sleep_mode(SLEEP_MODE_IDLE);		//Sleep mode Idle: using Timer Clock for Voltage Doubler
@@ -519,7 +515,6 @@ void state_machine()
 				{
 				case WAKEREASON_COUNTDOWN:
 					Display::Wake();
-					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
 					Button::Init();
 					while(!(Display::IsAnimationDone()) || Power::isCapLow())	//while animation not done or Cap Low
@@ -535,7 +530,6 @@ void state_machine()
 					break;
 				case WAKEREASON_BUTTON:
 					Display::Wake();
-					Temp::Wakeup();	//only wakeup if 5V available
 					Display::StartAnimation(Display::ANIMATION_WAKE);
 					Button::Init();
 					while(!(Display::IsAnimationDone()) || Power::isCapLow())	//while animation not done or Cap Low
@@ -802,11 +796,7 @@ void state_machine()
 			}
 			switch (infoState)
 			{
-			case 0:	//Temp
-				Display::SetByte(0,0x78);	//small t
-				Display::SetNegValue(1,Data::GetTemp(Data::DATA_CURRENT_TEMP));
-				break;
-			case 1: //Build Date
+			case 0: //Build Date
 				//Build Date
 				Display::SetByte(0,Display::numToByte(BUILD_DAY/10));
 				Display::SetByte(1,Display::numToByte(BUILD_DAY%10) | DEC_DOT);
@@ -815,7 +805,7 @@ void state_machine()
 				Display::SetByte(4,Display::numToByte(BUILD_YEAR/10));
 				Display::SetByte(5,Display::numToByte(BUILD_YEAR%10));
 				break;
-			case 2:
+			case 1:
 				//Build Version
 				Display::SetByte(0,0x1C); //v
 				Display::SetByte(1,Display::numToByte(BUILD_VERSION_MAJOR) | DEC_DOT);
@@ -830,11 +820,11 @@ void state_machine()
 					Display::SetByte(3,Display::numToByte(BUILD_VERSION_PATCH));
 				}
 				break;
-			case 3: //Current Runtime in 4 digit hour and 1 decimal point hour
+			case 2: //Current Runtime in 4 digit hour and 1 decimal point hour
 				Display::Set4DigValue(0,currentRuntime/360);
 				Display::SetByte(5,0x74); //h
 				break;
-			case 4: //Total Runtime
+			case 3: //Total Runtime
 				Display::Set4DigValue(0,Data::Get(Data::DATA_TOTAL_RUNTIME));
 				Display::SetByte(5,0x5E); //d
 				break;
