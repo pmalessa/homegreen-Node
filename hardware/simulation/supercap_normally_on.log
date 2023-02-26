@@ -1,0 +1,22 @@
+Circuit: * C:\Users\pmale\Documents\SourceTree\homegreen\Eagle\Node\simulation\supercap_normally_on.asc
+
+WARNING: Specified period is not longer than the sum of Trise, Tfall, and Ton for v2.  Increasing period to 600.002
+Direct Newton iteration for .op point succeeded.
+
+Date: Tue Aug 20 22:23:30 2019
+Total elapsed time: 0.144 seconds.
+
+tnom = 27
+temp = 27
+method = modified trap
+totiter = 4370
+traniter = 4357
+tranpoints = 1766
+accept = 1590
+rejected = 176
+matrix size = 21
+fillins = 12
+solver = Normal
+Matrix Compiler1: 2.02 KB object code size  0.4/0.3/[0.2]
+Matrix Compiler2: off  [0.2]/0.3/0.2
+
