@@ -1,13 +1,14 @@
 # HomeGreen - self watering system
 ## Description
 A self watering system for outdoor plants. This project contains the hardware and software files to completely build a HomeGreen node on your own.
+
 The system is based on an inexpensive node, which is able to control up to 3 pumps and can be powered by nearly any conventional powerbank. It has a basic user interface using a 6-Digit 7-Segment Display combined with 4 touch buttons. As a pump, you could either use a 4-6V DC pump or a 5V relay to control a higher voltage pump. The node is designed to be water resistant and can be easily mounted using embedded magnets or a 3D printed holder.
 
 ## Repository structure
 This repo contains everything you need to build a homegreen node on your own:
 
 - hardware: The EAGLE PCB and GERBER files, BOM and models and dimensions for the case
-- firmware: The firmware for the microcontroller (ATtimy88) on the node
+- firmware: The firmware for the microcontroller (attiny88) on the node
 
 ## Hardware
 The HomeGreen node PCB is designed to be enclosed in a 25mm diameter transparent pipe to be water resistant. The touch buttons can be used through the pipe without the need to open the case. The 2 ends need plastic caps, which could be easily 3D printed. one needs to be fully closed, while the other one needs to have an opening the for USB-A connector of the pump as well as the micro USB connector of the powerbank.
@@ -27,12 +28,15 @@ The HomeGreen node contains the following main components:
 
 ### Power management
 The main issue of supplying your gadgets using a powerbank is the fact, that nearly all powerbanks shut off after a certain time of inactivity. As the sleep current draw of the HomeGreen node is substantially lower than any charge current the powerbank is designed for, it treats it as inactive and shuts off eventually. 
+
 This led to the necessity to have a supercapacitor as an additional short-time energy storage onboard to be able to power the controller while in sleep and only wake the powerbank once the supercap is drained or it is time to enable the pump.
+
 Additionally, each powerbank is behaving differently when it comes to the sleep and wake behavior. Some powerbanks wake up immediately once you connect the capacitive load of the supercap, while others require an additional substantial resistive load to enable its regulators. Strangely, some powerbanks even change their polarity and apply -2.5V to their output!
+
 To support most of the available powerbanks on the market 2 MOSFETS back to back, combined with a charge pump and an additional controllable resistive load was necessary. Even with that, some powerbanks do not work reliably and should be avoided. A list of tested powerbanks will be added.
 
 ### User Interface
-The HomeGreen Node consists of a 6-Digit 7-Segment display as well as 4 touch buttons to view its status and adjust all parameters to your needs. The HomeGreen Node can be used to control up to 3 pumps using an additional HoemGreen Pump Hub. Once connected, the user interface switches to the ability to adjust timing of each pump separately. However, if no Pump Hub is connected, it is simplyfied to control just one pump.
+The HomeGreen Node consists of a 6-Digit 7-Segment display as well as 4 touch buttons to view its status and adjust all parameters to your needs. The HomeGreen Node can be used to control up to 3 pumps using an additional HomeGreen Pump Hub. Once connected, the user interface switches to the ability to adjust timing of each pump separately. However, if no Pump Hub is connected, it is simplyfied to control just one pump.
 
 #### Sleep State
 In its default sleep state, the 7-Segment Display is turned off and only the 2 Status LEDs are displaying its state. 
