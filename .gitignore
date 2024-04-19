@@ -9,3 +9,5 @@
 *.cproj
 .vs/
 Debug/
+hardware/Homegreen Node Basic/Homegreen Node Basic-backups
+fp-info-cache
