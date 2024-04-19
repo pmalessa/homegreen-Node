@@ -272,7 +272,7 @@ void state_machine()
 						Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 						Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 						break;
-#ifdef FEATURE_PUMP_STRENGTH
+#ifdef FEATURE_PUMP_STRENGTH_SELECTABLE
 					case DIGIT_PUMP_STRENGTH:
 						break;
 #endif
@@ -298,7 +298,7 @@ void state_machine()
 					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 					Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 					break;
-#ifdef FEATURE_PUMP_STRENGTH
+#ifdef FEATURE_PUMP_STRENGTH_SELECTABLE
 				case DIGIT_PUMP_STRENGTH:
 					Data::SetPumpStrength(currentPump,(Data::GetPumpStrength(currentPump)+1)%3);
 					Display::SetByte(3,Display::numToByte(Data::GetPumpStrength(currentPump)));
@@ -331,7 +331,7 @@ void state_machine()
 						Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 						Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 						break;
-#ifdef FEATURE_PUMP_STRENGTH
+#ifdef FEATURE_PUMP_STRENGTH_SELECTABLE
 					case DIGIT_PUMP_STRENGTH:
 						break;
 #endif
@@ -357,7 +357,7 @@ void state_machine()
 					Display::SetValue(DIGIT_DURATION,Data::Get((Data::data_type_t)(DIGIT_DURATION+currentPump)));
 					Display::SetByte(5,Display::numToByte(currentPump+1));	//1..3
 					break;
-#ifdef FEATURE_PUMP_STRENGTH
+#ifdef FEATURE_PUMP_STRENGTH_SELECTABLE
 				case DIGIT_PUMP_STRENGTH:
 					if(Data::GetPumpStrength(currentPump) == 0){Data::SetPumpStrength(currentPump,2);}
 					else{Data::SetPumpStrength(currentPump,Data::GetPumpStrength(currentPump)-1);}
@@ -400,7 +400,7 @@ void state_machine()
 					}
 					else
 					{
-#ifdef FEATURE_PUMP_STRENGTH
+#ifdef FEATURE_PUMP_STRENGTH_SELECTABLE
 						curdigit = DIGIT_PUMP_STRENGTH;
 						Display::SetByte(0,0x73);	//P
 						Display::SetByte(1,0x6D);	//S
@@ -412,7 +412,7 @@ void state_machine()
 					}
 					break;
 				case DIGIT_COUNTDOWN:
-#ifdef FEATURE_PUMP_STRENGTH
+#ifdef FEATURE_PUMP_STRENGTH_SELECTABLE
 					curdigit = DIGIT_PUMP_STRENGTH;
 					Display::SetByte(0,0x73);	//P
 					Display::SetByte(1,0x6D);	//S
@@ -428,7 +428,7 @@ void state_machine()
 					curdigit = DIGIT_INTERVAL;
 #endif
 				}
-#ifdef FEATURE_PUMP_STRENGTH
+#ifdef FEATURE_PUMP_STRENGTH_SELECTABLE
 				if (curdigit == DIGIT_PUMP_STRENGTH)
 				{
 					Display::EnableBlinking(DIGIT_DURATION);

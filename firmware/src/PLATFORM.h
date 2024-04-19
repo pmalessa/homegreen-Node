@@ -15,12 +15,12 @@
 #include <avr/sleep.h>
 #include <stdlib.h>
 
-#define BUILD_DAY 05
-#define BUILD_MONTH 07
-#define BUILD_YEAR 22
+#define BUILD_DAY 16
+#define BUILD_MONTH 04
+#define BUILD_YEAR 24
 #define BUILD_VERSION_MAJOR 1
 #define BUILD_VERSION_MINOR 4
-#define BUILD_VERSION_PATCH 7
+#define BUILD_VERSION_PATCH 8
 
 #ifdef HG_BASIC_HW_1_4_4
 
@@ -168,8 +168,14 @@
 #define TM_BIT_DAT      _BV(PD5)
 #endif
 
-//#define SLEEP_INTERVAL_S 4	//4000ms = 4s
-#define DISPLAY_TIMEOUT_S 10 //5sec
+#ifdef FEATURE_PUMP_STRENGTH
+
+//#define FEATURE_PUMP_STRENGTH_SELECTABLE
+#define FEATURE_PUMP_STRENGTH_OSCILLATING
+
+#endif
+
+#define DISPLAY_TIMEOUT_S 10
 
 #define true 1
 #define false 0
@@ -184,7 +190,7 @@ typedef enum{
 	DIGIT_INTERVAL,
 	DIGIT_DURATION,
 	DIGIT_COUNTDOWN,
-#ifdef FEATURE_PUMP_STRENGTH
+#ifdef FEATURE_PUMP_STRENGTH_SELECTABLE
 	DIGIT_PUMP_STRENGTH,
 #endif
 }digit_t;

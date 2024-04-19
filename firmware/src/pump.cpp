@@ -60,6 +60,18 @@ void Pump::run()
 		{
 			PUMP_PORT &= ~_BV(PUMP_PIN);	//turn off
 		}
+#ifdef FEATURE_PUMP_STRENGTH_OSCILLATING
+		static uint8_t dir = 0;
+		if(Data::GetPumpStrength(currentPump) == 2)
+		{
+			dir = 1;
+		}
+		else if (Data::GetPumpStrength(currentPump) == 0)
+		{
+			dir = 0;
+		}
+		Data::SetPumpStrength(currentPump,dir ? Data::GetPumpStrength(currentPump)-1 : Data::GetPumpStrength(currentPump)+1);
+#endif
 	}
 }
 
