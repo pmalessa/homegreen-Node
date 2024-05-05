@@ -15,12 +15,12 @@
 #include <avr/sleep.h>
 #include <stdlib.h>
 
-#define BUILD_DAY 16
-#define BUILD_MONTH 04
+#define BUILD_DAY 05
+#define BUILD_MONTH 05
 #define BUILD_YEAR 24
 #define BUILD_VERSION_MAJOR 1
 #define BUILD_VERSION_MINOR 4
-#define BUILD_VERSION_PATCH 8
+#define BUILD_VERSION_PATCH 9
 
 #ifdef HG_BASIC_HW_1_4_4
 
@@ -169,13 +169,13 @@
 #endif
 
 #ifdef FEATURE_PUMP_STRENGTH
-
 //#define FEATURE_PUMP_STRENGTH_SELECTABLE
 #define FEATURE_PUMP_STRENGTH_OSCILLATING
-
 #endif
 
 #define DISPLAY_TIMEOUT_S 10
+#define WAKEUP_INTERVAL_S 8 //Number of seconds between wakeup intervals. Power of 2
+
 
 #define true 1
 #define false 0

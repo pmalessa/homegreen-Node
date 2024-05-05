@@ -3,7 +3,6 @@
 
 uint16_t Power::LoadCounter = 0;
 uint16_t Power::currentCapVoltage = 0;
-uint8_t Power::adcStable = 0;
 DeltaTimer Power::powerTimer;
 
 void Power::Init() {
@@ -34,19 +33,12 @@ void Power::Wakeup()
 	ADCSRA |= _BV(ADSC);										//start conversion
 
 	currentCapVoltage = ADC;	//scrap measurement
-
-	adcStable = false;
 }
 
 void Power::Sleep()
 {
 	ADCSRA = 0;	//disable ADC
 	PRR |= _BV(PRADC);
-}
-
-bool Power::isAdcStable()
-{
-	return 1;
 }
 
 bool Power::isPowerConnected()	//check if the 5V Pin is high
@@ -79,32 +71,6 @@ bool Power::isCapFull()	//return if last measured CurVol higher than Cap Full Hi
 {
 	uint16_t curVol = adc2vol();
 	if(curVol > POWER_CAPFULL)
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
-}
-
-bool Power::isCapNotFull()	//return if last measured CurVol lower than Cap Full Lower Threshold
-{
-	uint16_t curVol = adc2vol();
-	if(curVol < POWER_CAPNOTFULL)
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
-}
-
-bool Power::isDeepDischarged()
-{
-	uint16_t curVol = adc2vol();
-	if(curVol < POWER_DEEPVOLTAGE)
 	{
 		return 1;
 	}

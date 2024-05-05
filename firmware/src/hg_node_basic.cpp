@@ -47,7 +47,7 @@ uint8_t checkCounter = 3, tryCounter = 3;	//try 3 times every 5 seconds, then Er
 wakestage_t wakeupStage = WAKESTAGE_FIRSTCHECK;
 wakereason_t wakeReason = WAKEREASON_COUNTDOWN;
 Data::statusBit_t status;
-volatile uint8_t wdt_interrupt = 0;
+volatile uint8_t wakeup_interrupt = 0;
 DeltaTimer buttonStepTimer;
 volatile uint32_t currentRuntime = 0;	//runtime in seconds since last reset
 //Function Prototypes
@@ -57,16 +57,18 @@ ISR(TIMER0_COMPA_vect) {	//250ms
 	static uint8_t cnt = 0;
 	static uint16_t totalRuntimeStep = 0;
 	cnt++;
-	if(cnt > 15)	//16x250ms = 4 seconds
+	if(cnt > (WAKEUP_INTERVAL_S <<2)-1)	//32x250ms = 8 seconds
 	{
 		cnt = 0;
-		wdt_interrupt = 1;
-		currentRuntime +=4;
-		totalRuntimeStep +=4;
+		wakeup_interrupt = 1;
+		Data::decCountdown(WAKEUP_INTERVAL_S);
+		currentRuntime +=WAKEUP_INTERVAL_S;
+		totalRuntimeStep +=WAKEUP_INTERVAL_S;
 		if(totalRuntimeStep > 24*360) //0.1days = 2.4*3600 sec
 		{
 			totalRuntimeStep = 0;
 			Data::Set(Data::DATA_TOTAL_RUNTIME,Data::Get(Data::DATA_TOTAL_RUNTIME)+1);
+			Data::setSavePending();
 		}
 	}
 }
@@ -82,6 +84,18 @@ void switchTo(state_t newstate)
 void anypress_callback()	//called if any Button pressed or released
 {
 	Display::ResetTimeout();
+}
+
+void wakeup_animation(uint8_t slow)
+{
+	while(!(Display::IsAnimationDone()))	//while animation not done
+	{
+		Display::Draw();
+		Timer::shortSleep(30 + slow*60);
+		if(!Power::isPowerConnected()){	//cancel, if power lost
+			break;
+		}
+	}
 }
 
 static void __attribute__((noreturn))
@@ -377,11 +391,12 @@ void state_machine()
 				switchTo(STATE_DISPLAY);									//switch to State Display
 				break;
 			}
-			else if(Display::IsTimeout())	//IDLE timeout, dont save
+			else if(Display::IsTimeout())	//IDLE timeout, save as well
 			{
-				Data::resetFromEEPROM();									//load old values from EEPROM
+				Data::setSavePending();
 				Display::DisableBlinking();
 				Data::resetCountdown();										//reset Countdown
+				Data::SaveConfig();
 				fade();
 				switchTo(STATE_DISPLAY);									//switch to State Display
 				break;
@@ -463,17 +478,12 @@ void state_machine()
 				first = 0;
 				Display::Sleep();					//DeInit Display
 				Led::Off(LED_BTN);
-				if(Power::isPowerConnected() && Power::isCapNotFull())	//if Powerbank available and Cap not full
-				{
-					switchTo(STATE_CHARGING);							//charge cap before going to sleep
-					break;
-				}
 				Power::setInputPower(0);			//disable Powerbank
 			}
 			Power::Sleep();
 			Timer::Sleep();
 		    set_sleep_mode(SLEEP_MODE_IDLE);		//Sleep mode Idle: using Timer Clock for Voltage Doubler
-			wdt_interrupt = 0;						//clear open interrupts
+			wakeup_interrupt = 0;					//clear open interrupts
 		    cli();									//disable interrupts
 			sleep_enable();							//enable sleep
 			sei();									//enable interrupts
@@ -485,10 +495,9 @@ void state_machine()
 			Power::Wakeup();
 			sei();									//enable interrupts
 
-			if(wdt_interrupt == 1)					//wdt interrupt wakeup
+			if(wakeup_interrupt == 1)					//interrupt wakeup
 			{
-				Data::decCountdown(8);
-				wdt_interrupt = 0;
+				wakeup_interrupt = 0;
 				if(Data::GetErrors())	//if any error bit set
 				{
 					Led::Blink(LED_RED,1,20);	//blink error
@@ -518,7 +527,7 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				checkCounter = 60;	//charge for 60 seconds
+				checkCounter = 30;	//charge for 30 seconds
 			}
 			if(Button::isAnyPressed())	//interrupt charging if button pressed
 			{
@@ -526,13 +535,13 @@ void state_machine()
 				switchTo(STATE_WAKEUP);
 				break;
 			}
-			if(checkCounter%2)	//every 2 seconds, pulse load and blink
+			if(checkCounter%4==0)	//every 4 seconds, pulse load and blink
 			{
 				Power::setLoad(true);
-				Led::Blink(LED_GREEN,2,50);
+				Led::Blink(LED_GREEN,2,30);
 				Power::setLoad(false);
 			}
-			if(checkCounter)
+			if(checkCounter && !Power::isCapFull())
 			{
 				checkCounter--;
 				Timer::shortSleep(1000);
@@ -546,18 +555,19 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				checkCounter = 3;	//check every 250ms 3 times
-				tryCounter = 3;	//try every 10s 3 times
+				checkCounter = 5;	//check every 250ms x times
+				tryCounter = 3;	//try every 10s x times
 				wakeupStage = WAKESTAGE_FIRSTCHECK;
 				Led::On(LED_GREEN);
 				Power::setInputPower(1);
+				Timer::shortSleep(500);
 			}
 			if(Power::isPowerConnected())
-			{
+			{	//successfully woken up		
 				Led::Off(LED_GREEN);
-				uint8_t vol_low = Power::isDeepDischarged();
 				//successfully woken up
-				if(vol_low)
+				uint8_t slow_wakeup = Power::isCapLow();
+				if(slow_wakeup)
 				{
 					Button::DeInit();	//reInit touch chip to prevent wrong button presses
 					Timer::shortSleep(200);
@@ -568,11 +578,7 @@ void state_machine()
 					Display::Wake();
 					Display::StartAnimation(Display::ANIMATION_WAKE);
 					Button::Init();
-					while(!(Display::IsAnimationDone()) || Power::isCapLow())	//while animation not done or Cap Low
-					{
-						Display::Draw();
-						Timer::shortSleep(30 + vol_low*60);	//Decrease Speed if Voltage Low
-					}
+					wakeup_animation(slow_wakeup);
 					switchTo(STATE_PUMPING);		//switch to Pump State
 					break;
 				case WAKEREASON_CHARGING:
@@ -583,11 +589,7 @@ void state_machine()
 					Display::Wake();
 					Display::StartAnimation(Display::ANIMATION_WAKE);
 					Button::Init();
-					while(!(Display::IsAnimationDone()) || Power::isCapLow())	//while animation not done or Cap Low
-					{
-						Display::Draw();
-						Timer::shortSleep(30 + vol_low*60);	//Decrease Speed if Voltage Low
-					}
+					wakeup_animation(slow_wakeup);
 					Led::On(LED_BTN);			//turn on Button LED
 					switchTo(STATE_SHOW_ERROR);		//switch to Error State -> Display State
 					break;
@@ -603,20 +605,14 @@ void state_machine()
 					if(checkCounter)
 					{
 						Power::setLoad(1);
-						Timer::shortSleep(200);
+						Timer::shortSleep(50);
 						Power::setLoad(0);
-						Timer::shortSleep(100);
+						Timer::shortSleep(50);
 						checkCounter--;
 					}
 					else
 					{
 						wakeupStage = WAKESTAGE_SECONDWAKE;
-						Power::setInputPower(0);
-						Led::Off(LED_GREEN);
-						Timer::shortSleep(800);
-						Led::On(LED_GREEN);
-						Power::setInputPower(1);
-						Timer::shortSleep(200);
 					}
 					break;
 				case WAKESTAGE_SECONDWAKE:
@@ -625,13 +621,13 @@ void state_machine()
 						tryCounter--;
 						Power::setInputPower(0);
 						Led::Off(LED_GREEN);
-						Timer::shortSleep(10000);
+						Timer::shortSleep(5000);
 						Led::On(LED_GREEN);
 						Power::setInputPower(1);
 						Power::setLoad(1);
-						Timer::shortSleep(200);
-						Power::setLoad(0);
 						Timer::shortSleep(100);
+						Power::setLoad(0);
+						Timer::shortSleep(500);
 					}
 					else
 					{

@@ -20,13 +20,8 @@ public:
     static bool isPowerConnected();
     static bool isCapLow();
     static bool isCapFull();
-    static bool isCapNotFull();
-    static bool isDeepDischarged();
     static void setInputPower(uint8_t state);
     static void setLoad(uint8_t state);
-    static bool isAdcStable();
-    static bool isPowerLost();
-    static void disableSolarCharger(uint8_t state);
     static void run();
 private:
     static uint16_t adc2vol()
@@ -37,12 +32,8 @@ private:
     }
 
     #define CHANNEL_1V1	0b1110
-    #define POWER_DEEPVOLTAGE 2200	//Low Voltage Threshold for EEPROM in mV
-    #define POWER_LOWVOLTAGE 2800	//Low Voltage Threshold in mV
-    #define POWER_CAPFULL 4300	//Cap Full High Threshold in mV
-    #define POWER_CAPNOTFULL 4100	//Cap Full Low Threshold in mV
-
-    #define ALPHA 0.7    //alpha value for EWMA Filtering
+    #define POWER_LOWVOLTAGE 3100	//Low Voltage Threshold in mV
+    #define POWER_CAPFULL 4600	//Cap Full High Threshold in mV
 
     static uint16_t LoadCounter;
     static uint16_t currentCapVoltage;
