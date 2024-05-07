@@ -78,6 +78,8 @@ void Pump::run()
 void Pump::Start()
 {
 	currentPump = PUMP_1;
+	Data::SetPumpStrength(currentPump,0);
+	pumpTimer.reset();
 }
 
 void Pump::setCountdown(uint16_t sec)
@@ -101,6 +103,7 @@ void Pump::Decrement()	//1min steps
 void Pump::Stop()
 {
 	pumpCounter = 0;
+	PUMP_PORT &= ~_BV(PUMP_PIN);	//turn off
 }
 
 uint16_t Pump::getCountdown()

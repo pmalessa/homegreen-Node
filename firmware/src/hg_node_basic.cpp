@@ -31,11 +31,6 @@ typedef enum{
 state_t state = STATE_BOOT;
 
 typedef enum{
-	WAKESTAGE_FIRSTCHECK,
-	WAKESTAGE_SECONDWAKE
-}wakestage_t;
-
-typedef enum{
 	WAKEREASON_COUNTDOWN,
 	WAKEREASON_BUTTON,
 	WAKEREASON_CHARGING
@@ -43,8 +38,7 @@ typedef enum{
 
 //Global Variables
 uint8_t first = 1;
-uint8_t checkCounter = 3, tryCounter = 3;	//try 3 times every 5 seconds, then Error
-wakestage_t wakeupStage = WAKESTAGE_FIRSTCHECK;
+uint8_t tryCounter = 3;
 wakereason_t wakeReason = WAKEREASON_COUNTDOWN;
 Data::statusBit_t status;
 volatile uint8_t wakeup_interrupt = 0;
@@ -158,6 +152,7 @@ void state_machine()
 	static Button::button_press press;
 	static uint8_t currentPump = 0;
 	static bool hubConnected = false;
+	static uint8_t wakeupStage = 0;
 
 	switch (state) {
 		case STATE_BOOT:
@@ -527,7 +522,7 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				checkCounter = 30;	//charge for 30 seconds
+				tryCounter = 30;	//charge for 30 seconds
 			}
 			if(Button::isAnyPressed())	//interrupt charging if button pressed
 			{
@@ -535,15 +530,15 @@ void state_machine()
 				switchTo(STATE_WAKEUP);
 				break;
 			}
-			if(checkCounter%4==0)	//every 4 seconds, pulse load and blink
+			if(tryCounter%4==0)	//every 4 seconds, pulse load and blink
 			{
 				Power::setLoad(true);
 				Led::Blink(LED_GREEN,2,30);
 				Power::setLoad(false);
 			}
-			if(checkCounter && !Power::isCapFull())
+			if(tryCounter && !Power::isCapFull())
 			{
-				checkCounter--;
+				tryCounter--;
 				Timer::shortSleep(1000);
 			}
 			else
@@ -555,9 +550,8 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				checkCounter = 5;	//check every 250ms x times
-				tryCounter = 3;	//try every 10s x times
-				wakeupStage = WAKESTAGE_FIRSTCHECK;
+				tryCounter = 5;	//try every 10s x times
+				wakeupStage = 0;
 				Led::On(LED_GREEN);
 				Power::setInputPower(1);
 				Timer::shortSleep(500);
@@ -601,38 +595,39 @@ void state_machine()
 			{
 				switch (wakeupStage)
 				{
-				case WAKESTAGE_FIRSTCHECK:
-					if(checkCounter)
+				case 0:
+					if(tryCounter)
 					{
 						Power::setLoad(1);
 						Timer::shortSleep(50);
 						Power::setLoad(0);
 						Timer::shortSleep(50);
-						checkCounter--;
+						tryCounter--;
 					}
 					else
-					{
-						wakeupStage = WAKESTAGE_SECONDWAKE;
-					}
-					break;
-				case WAKESTAGE_SECONDWAKE:
-					if(tryCounter)
-					{
-						tryCounter--;
+					{	//switch to next wakeStage
 						Power::setInputPower(0);
 						Led::Off(LED_GREEN);
 						Timer::shortSleep(5000);
-						Led::On(LED_GREEN);
+						tryCounter = 5;
+						wakeupStage = 1;
 						Power::setInputPower(1);
+						Led::On(LED_GREEN);
+					}
+					break;
+				case 1:
+					if(tryCounter)
+					{
 						Power::setLoad(1);
 						Timer::shortSleep(100);
 						Power::setLoad(0);
 						Timer::shortSleep(500);
+						tryCounter--;
 					}
 					else
 					{
-						Led::Off(LED_GREEN);
 						Power::setInputPower(0);
+						Led::Off(LED_GREEN);
 						Data::SetError(Data::STATUS_PB_ERR);	//save error
 						if(!Power::isCapLow()){	//if enough power, save flag
 							Data::SaveError();
@@ -655,8 +650,17 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				Timer::shortSleep(500);	//wait for Cap to charge a bit
 				Display::StartAnimation(Display::ANIMATION_PUMP);
+				tryCounter = 5; //wait 2.5s before starting to pump, to charge Cap a bit
+				while(tryCounter)	//while animation not done
+				{
+					Display::Draw();
+					Timer::shortSleep(500);
+					if(!Power::isPowerConnected()){	//cancel, if power lost
+						break;
+					}
+					tryCounter--;
+				}
 				hubConnected = Pump::isHubConnected();
 				currentPump = 0;
 				Pump::setCountdown(Data::Get(Data::data_type_t(Data::DATA_DURATION1+currentPump))*6);
