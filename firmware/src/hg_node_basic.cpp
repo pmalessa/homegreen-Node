@@ -73,6 +73,7 @@ void switchTo(state_t newstate)
 	state = newstate;
 	Display::StopAnimation();
 	Button::Clear();
+	Display::DisableBlinking();
 }
 
 void anypress_callback()	//called if any Button pressed or released
@@ -82,6 +83,11 @@ void anypress_callback()	//called if any Button pressed or released
 
 void wakeup_animation(uint8_t slow)
 {
+	if(slow){
+		Button::DeInit();	//reInit touch chip to prevent wrong button presses
+		Timer::shortSleep(200);
+		Button::Init();
+	}
 	while(!(Display::IsAnimationDone()))	//while animation not done
 	{
 		Display::Draw();
@@ -141,6 +147,9 @@ void fade()
 	while(!Display::IsAnimationDone())
 	{
 		Display::Draw();
+		if(!Power::isPowerConnected()){	//cancel, if power lost
+			break;
+		}
 	}
 	Button::Clear();
 }
@@ -153,6 +162,7 @@ void state_machine()
 	static uint8_t currentPump = 0;
 	static bool hubConnected = false;
 	static uint8_t wakeupStage = 0;
+	static uint8_t slow_wakeup = 0;
 
 	switch (state) {
 		case STATE_BOOT:
@@ -175,11 +185,12 @@ void state_machine()
 				Display::SetValue(DIGIT_DURATION,Data::Get(Data::DATA_DURATION1));
 				Display::SetValue(DIGIT_INTERVAL,Data::Get(Data::DATA_INTERVAL));
 				Display::SetValue(DIGIT_COUNTDOWN,Data::getCountdownDisplay());
+				Display::EnableBlinking(DIGIT_COUNTDOWN);
 			}
 			if(Display::IsTimeout())	//Display Timeout reached
 			{
-				fade();
 				Data::SaveConfig();	//if savePending, save data
+				fade();
 				switchTo(STATE_SLEEP);
 				break;
 			}
@@ -191,7 +202,6 @@ void state_machine()
 			if(Data::getCountdown() == 0)			//if countdown reached, switch to PUMPING
 			{
 				Display::ResetTimeout();
-				Data::resetCountdown();				//reset Countdown
 				fade();
 				switchTo(STATE_PUMPING);
 				break;
@@ -379,19 +389,15 @@ void state_machine()
 			if((press == Button::BUTTON_LONG_PRESS))	//Long Press, Config done
 			{
 				Data::setSavePending();										//save to EEPROM
-				Display::DisableBlinking();
 				Data::resetCountdown();										//reset Countdown
 				Data::SaveConfig();
 				fade();
 				switchTo(STATE_DISPLAY);									//switch to State Display
 				break;
 			}
-			else if(Display::IsTimeout())	//IDLE timeout, save as well
+			else if(Display::IsTimeout())	//IDLE timeout, dont save
 			{
-				Data::setSavePending();
-				Display::DisableBlinking();
-				Data::resetCountdown();										//reset Countdown
-				Data::SaveConfig();
+				Data::resetFromEEPROM();
 				fade();
 				switchTo(STATE_DISPLAY);									//switch to State Display
 				break;
@@ -452,7 +458,6 @@ void state_machine()
 			press = Button::isPressed(Button::BUTTON_MAN);							//get Button MAN Press
 			if(press == Button::BUTTON_LONG_PRESS)	//if long Press
 			{
-				Display::DisableBlinking();
 				Display::ResetTimeout();
 				fade();
 				switchTo(STATE_INFO);		//switch to State Info
@@ -550,22 +555,16 @@ void state_machine()
 			if(first)
 			{
 				first = 0;
-				tryCounter = 5;	//try every 10s x times
+				tryCounter = 3;
 				wakeupStage = 0;
 				Led::On(LED_GREEN);
+				slow_wakeup = Power::isCapLow();
 				Power::setInputPower(1);
 				Timer::shortSleep(500);
 			}
 			if(Power::isPowerConnected())
 			{	//successfully woken up		
 				Led::Off(LED_GREEN);
-				//successfully woken up
-				uint8_t slow_wakeup = Power::isCapLow();
-				if(slow_wakeup)
-				{
-					Button::DeInit();	//reInit touch chip to prevent wrong button presses
-					Timer::shortSleep(200);
-				}
 				switch (wakeReason)
 				{
 				case WAKEREASON_COUNTDOWN:
@@ -593,9 +592,10 @@ void state_machine()
 			}
 			else
 			{
+				slow_wakeup = slow_wakeup || Power::isCapLow(); //slow wakeup if cap was too low at least once
 				switch (wakeupStage)
 				{
-				case 0:
+				case 0: //wake up with short load bursts with 50% duty
 					if(tryCounter)
 					{
 						Power::setLoad(1);
@@ -609,19 +609,39 @@ void state_machine()
 						Power::setInputPower(0);
 						Led::Off(LED_GREEN);
 						Timer::shortSleep(5000);
-						tryCounter = 5;
-						wakeupStage = 1;
+						tryCounter = 3;
+						wakeupStage++;
 						Power::setInputPower(1);
 						Led::On(LED_GREEN);
 					}
 					break;
-				case 1:
+				case 1: //wake up with longer load periods with low duty
 					if(tryCounter)
 					{
 						Power::setLoad(1);
 						Timer::shortSleep(100);
 						Power::setLoad(0);
 						Timer::shortSleep(500);
+						tryCounter--;
+					}
+					else
+					{	//switch to next wakeStage
+						Power::setInputPower(0);
+						Led::Off(LED_GREEN);
+						Timer::shortSleep(20000);
+						tryCounter = 3;
+						wakeupStage++;
+						Power::setInputPower(1);
+						Led::On(LED_GREEN);
+					}
+					break;
+				case 2: //after a long wait period, try again without load by cycling InputPower switch
+					if(tryCounter)
+					{
+						Power::setInputPower(0);
+						Timer::shortSleep(2000);
+						Power::setInputPower(1);
+						Timer::shortSleep(2000);
 						tryCounter--;
 					}
 					else
@@ -636,7 +656,6 @@ void state_machine()
 							Data::setCustomCountdown(300);	//if wakeReason was Countdown, try 5 minutes later, as it is urgent
 						switchTo(STATE_SLEEP);	//back to sleep
 					}
-					break;
 				}
 			}
 			break;
@@ -651,7 +670,10 @@ void state_machine()
 			{
 				first = 0;
 				Display::StartAnimation(Display::ANIMATION_PUMP);
-				tryCounter = 5; //wait 2.5s before starting to pump, to charge Cap a bit
+				hubConnected = Pump::isHubConnected();
+				currentPump = 0;
+				Pump::setCountdown(Data::Get(Data::data_type_t(Data::DATA_DURATION1+currentPump))*6);
+				tryCounter = 8; //wait 4s before starting to pump, to charge Cap a bit
 				while(tryCounter)	//while animation not done
 				{
 					Display::Draw();
@@ -661,9 +683,6 @@ void state_machine()
 					}
 					tryCounter--;
 				}
-				hubConnected = Pump::isHubConnected();
-				currentPump = 0;
-				Pump::setCountdown(Data::Get(Data::data_type_t(Data::DATA_DURATION1+currentPump))*6);
 				Pump::Start();		//enable Pump for specified duration
 			}
 			Display::ResetTimeout(); 						//Display always on
@@ -753,6 +772,7 @@ void state_machine()
 				{
 					Data::SaveError();
 				}
+				Pump::setCountdown(30); //try 30sec later
 				switchTo(STATE_SLEEP);
 				break;
 			}

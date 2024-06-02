@@ -221,7 +221,6 @@ void Data::setDefault()
 
 void Data::resetFromEEPROM()
 {
-	
 	data[DATA_INTERVAL] = eeprom_read_word((uint16_t *)ADR_INTERVAL);
 	data[DATA_DURATION1] = eeprom_read_word((uint16_t *)ADR_DURATION1);
 	data[DATA_DURATION2] = eeprom_read_word((uint16_t *)ADR_DURATION2);
