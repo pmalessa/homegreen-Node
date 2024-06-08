@@ -1882,16 +1882,6 @@
 	)
 	(wire
 		(pts
-			(xy 90.17 52.07) (xy 92.71 52.07)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6c58739d-daf8-4458-90fd-7fe30ed25f30")
-	)
-	(wire
-		(pts
 			(xy 223.52 90.17) (xy 223.52 88.9)
 		)
 		(stroke
@@ -2049,16 +2039,6 @@
 			(type default)
 		)
 		(uuid "b1c78991-6f7d-4685-b052-f850783468c1")
-	)
-	(wire
-		(pts
-			(xy 198.12 96.52) (xy 200.66 96.52)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b3f92f4f-41e3-406a-962c-ac7ff837865e")
 	)
 	(wire
 		(pts
@@ -2447,17 +2427,6 @@
 		)
 		(uuid "7ec1022f-802a-4d1f-b294-81a1a75caaa7")
 	)
-	(label "PUMP_CURRENT"
-		(at 200.66 96.52 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "80c4d86f-369a-4705-a624-658a1b5447e9")
-	)
 	(label "MOSI"
 		(at 107.95 135.89 0)
 		(fields_autoplaced yes)
@@ -2743,17 +2712,6 @@
 			(justify left bottom)
 		)
 		(uuid "e84236a9-8e7d-48c3-96c7-70b2328d1e80")
-	)
-	(label "PUMP_CURRENT"
-		(at 92.71 52.07 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "ef21d662-0f99-45c4-9a08-f9245aa03a58")
 	)
 	(label "MISO"
 		(at 200.66 76.2 0)
@@ -4263,16 +4221,6 @@
 				(justify right)
 			)
 			(uuid "cd173111-b6dd-4ec4-9c4c-811abf2b38d2")
-		)
-		(pin "PUMP_CURRENT" output
-			(at 90.17 52.07 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-			(uuid "4bd55a69-6f31-4d8e-aca8-ee6064658890")
 		)
 		(pin "USB2" input
 			(at 90.17 58.42 0)
