@@ -39,6 +39,12 @@ private:
     static uint16_t currentCapVoltage;
     static uint8_t adcStable;
     static DeltaTimer powerTimer;
+    static uint8_t powerPinIntegrator;
+    static bool powerPinState;
+
+    //100ms debouncing
+    #define MAXIMUM	10
+
 };
 
 #endif /* POWER_H_ */

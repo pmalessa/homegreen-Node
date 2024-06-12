@@ -60,9 +60,3 @@ void Timer::count()
 {
 	millis++;
 }
-
-//1ms Timer1, active Timer
-ISR(TIMER1_COMPA_vect)
-{
-	Timer::count();
-}

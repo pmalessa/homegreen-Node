@@ -4,6 +4,8 @@
 uint16_t Power::LoadCounter = 0;
 uint16_t Power::currentCapVoltage = 0;
 DeltaTimer Power::powerTimer;
+uint8_t Power::powerPinIntegrator = 0;
+bool Power::powerPinState = 0;
 
 void Power::Init() {
 	EN_PB_DDR |= _BV(EN_PB_PIN);
@@ -33,6 +35,14 @@ void Power::Wakeup()
 	ADCSRA |= _BV(ADSC);										//start conversion
 
 	currentCapVoltage = ADC;	//scrap measurement
+
+	//initialize after wakeup
+	powerPinState = CHK_5V_PINREG & _BV(CHK_5V_PIN);
+	if(powerPinState){
+		powerPinIntegrator = MAXIMUM;
+	}else{
+		powerPinIntegrator = 0;
+	}
 }
 
 void Power::Sleep()
@@ -43,15 +53,7 @@ void Power::Sleep()
 
 bool Power::isPowerConnected()	//check if the 5V Pin is high
 {
-	uint8_t state = CHK_5V_PINREG & _BV(CHK_5V_PIN);	//read 5V Pin
-	if(state)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
+	return powerPinState;
 }
 
 bool Power::isCapLow()	//return if last measured CurVol lower than Threshold
@@ -98,7 +100,7 @@ void Power::setLoad(uint8_t state)
 {
 	if(state == 1)
 	{
-		EN_LOAD_PORT |= _BV(EN_LOAD_PIN);		//turn on load
+		EN_LOAD_PORT |= _BV(EN_LOAD_PIN);	//turn on load
 	}
 	else
 	{
@@ -111,5 +113,27 @@ void Power::run()
 	if(powerTimer.isTimeUp())	//every 10ms
 	{
 		currentCapVoltage = ADC;
+
+		//debouncing algorithm using integrator
+		if ((CHK_5V_PINREG & _BV(CHK_5V_PIN)) == 0)	//read 5V Pin
+		{
+			if (powerPinIntegrator > 0)
+			{
+				powerPinIntegrator--;
+			}
+		}
+		else if (powerPinIntegrator < MAXIMUM)
+		{
+			powerPinIntegrator++;
+		}
+		if (powerPinIntegrator == 0)
+		{
+			powerPinState = 0;
+		}
+		else if (powerPinIntegrator >= MAXIMUM)
+		{
+			powerPinState = 1;
+			powerPinIntegrator = MAXIMUM;
+		}
 	}
 }

@@ -37,6 +37,5 @@ private:
     #define PUMP_2 1
     #define PUMP_3 2
 
-
 };
 #endif /* PUMP_H_ */

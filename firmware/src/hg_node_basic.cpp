@@ -67,6 +67,15 @@ ISR(TIMER0_COMPA_vect) {	//250ms
 	}
 }
 
+//1ms Timer1, active Timer
+ISR(TIMER1_COMPA_vect)
+{
+	Timer::count();
+	Power::run();
+	Button::run();
+	Pump::run();
+}
+
 void switchTo(state_t newstate)
 {
 	first = 1;
@@ -106,9 +115,6 @@ main_loop (void)
 		asm("wdr"); //reset watchdog
 		state_machine();
 		Display::Draw();
-		Power::run();
-		Button::run();
-		Pump::run();
 		Timer::shortSleep(10);	//10ms delay
 	}
 }
@@ -763,6 +769,7 @@ void state_machine()
 			{
 				Pump::Decrement();
 			}
+			
 			if(!Power::isPowerConnected()) //if power lost
 			{
 				Pump::Stop();
@@ -776,6 +783,7 @@ void state_machine()
 				switchTo(STATE_SLEEP);
 				break;
 			}
+			
 			break;
 
 		case STATE_SHOW_ERROR:
