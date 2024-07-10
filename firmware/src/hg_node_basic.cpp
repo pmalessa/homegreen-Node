@@ -701,6 +701,7 @@ void state_machine()
 					{
 						Display::StopAnimation();
 						Data::resetCountdown();						//reset Countdown
+						Data::ClearError(Data::STATUS_PB_ERR);
 						fade();
 						switchTo(STATE_DISPLAY);
 						break;
@@ -712,6 +713,7 @@ void state_machine()
 				{
 					Display::StopAnimation();
 					Data::resetCountdown();						//reset Countdown
+					Data::ClearError(Data::STATUS_PB_ERR);
 					fade();
 					switchTo(STATE_DISPLAY);
 					break;

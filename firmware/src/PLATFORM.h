@@ -16,11 +16,11 @@
 #include <stdlib.h>
 
 #define BUILD_DAY 10
-#define BUILD_MONTH 06
+#define BUILD_MONTH 07
 #define BUILD_YEAR 24
 #define BUILD_VERSION_MAJOR 1
 #define BUILD_VERSION_MINOR 5
-#define BUILD_VERSION_PATCH 4
+#define BUILD_VERSION_PATCH 5
 
 #ifdef HG_BASIC_HW_1_4_4
 
